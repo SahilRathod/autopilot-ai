@@ -7,17 +7,25 @@ from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import platform_core as core
+from app import platform_core as core, ai_director
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     core.initialize()
-    yield
+    ai_director.initialize()
+    import httpx
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(20.0, connect=5.0),
+        limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
+        follow_redirects=False,
+    ) as client:
+        _app.state.gemini_client = client
+        yield
 
 
 app = FastAPI(
-    title="Autopilot AI Local API", version="0.3.0", lifespan=lifespan,
+    title="Autopilot AI Local API", version="0.4.0", lifespan=lifespan,
     description="Local-only management API. No authentication or YouTube publishing yet.",
 )
 app.add_middleware(
@@ -77,7 +85,7 @@ def channel_or_404(workspace_id: int, channel_id: int):
 
 @app.get("/api/v1/health")
 def health():
-    return {"status": "ok", "version": "0.3.0", "mode": "local", "publishing": False}
+    return {"status": "ok", "version": "0.4.0", "mode": "local", "publishing": False}
 
 
 @app.get("/api/v1/workspaces")
@@ -173,6 +181,10 @@ def overview(workspace_id: int = Path(ge=1)):
         "queue": sum(job["state"] == "queued" for job in all_jobs),
         "states": {state: sum(job["state"] == state for job in all_jobs) for state in core.STATES},
         "youtube_connected": False,
-        "ai_enabled": False,
+        "ai_enabled": True, "gemini_configured": ai_director.gemini_enabled(),
         "publishing_enabled": False,
     }
+
+
+from apps.api.ai_routes import router as ai_router
+app.include_router(ai_router)
