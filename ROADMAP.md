@@ -10,3 +10,9 @@
 - **V2.0 SaaS:** Authentication, organization memberships, PostgreSQL tenant security, hosted workers, metered billing.
 
 Until V0.6, no real publishing occurs.
+
+## V0.4 — AI Director (implemented)
+
+- Offline content-pack templates; optional Gemini model, channel memory, caching, local cloud request caps.
+- FastAPI endpoints and standalone Python CLI, reviewed job handoff, network-free unit tests.
+- Future V0.5: video editor, captions, voice, visual asset pipeline and true multi-niche production.
