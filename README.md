@@ -1,6 +1,13 @@
-# Autopilot AI — Creator Studio V0.3
+# Autopilot AI — AI Director V0.4
 
-Local-first, multi-channel production management. Not yet an AI video generator or YouTube uploader.
+Local-first, multi-channel AI drafting and production management. Still not a YouTube video generator or uploader.
+
+## V0.4 AI Director
+
+- Draft title, hook, outline, script template, description, keywords, Shorts concepts and verification checklist.
+- Persistent per-channel memory, SQLite drafts, 24-hour cache, offline mode and optional Gemini 2.5 Flash-Lite.
+- No npm needed for Python-only AI CLI. See [V0.4 setup](V04_GUIDE.md).
+- Cloud calls are off by default; draft handoff never publishes to YouTube.
 
 ## Features
 - Next.js + TypeScript dashboard for workspaces, channel profiles, jobs, review approvals and audit history.
