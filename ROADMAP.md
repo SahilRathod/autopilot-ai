@@ -1,32 +1,12 @@
-# Engineering roadmap (not implemented yet)
+# Autopilot AI Roadmap
 
-## Phase 1: Local MVP — included
-- Configurable multi-game strategy and 4 content proposals
-- SQLite job log, legal lifecycle transitions, human approval CLI
-- Local video clip renderer for original footage (FFmpeg)
-- Read-only localhost dashboard
-- Dry-run scheduling state, basic tests, GitHub Actions CI
+- **V0.2 complete:** Python CLI, workspaces/channels/jobs, manual gameplay trimming.
+- **V0.3 this version:** FastAPI, Next.js TypeScript Creator Studio, local approvals and audit activity.
+- **V0.4:** AI Director and model adapters (Gemini/local), script research, channel memory, usage caps.
+- **V0.5:** Integrate FFmpeg workflows, highlight selection, captioning and niche-based production modules.
+- **V0.6:** Secure YouTube OAuth, private uploads, approval-gated scheduling, analytics and comments.
+- **V0.7:** Real scheduler and durable job worker, retries, backup, quotas, notifications.
+- **V1.0:** Reliable multi-channel local creator studio.
+- **V2.0 SaaS:** Authentication, organization memberships, PostgreSQL tenant security, hosted workers, metered billing.
 
-## Phase 2: Real creator workflow
-- OAuth desktop login and encrypted token storage; YouTube Data API uploads
-- API quota awareness, retries/backoff, idempotency, explicit publishing policies
-- Gemini adapter with structured output and budget/usage ledger; offline fallback
-- Transcription and forced subtitles (local model, resource permitting)
-- Voice generation via own microphone or locally licensed TTS
-- AI-assisted highlight selection via audio spikes, scene cuts, OCR and game-specific rules
-- Portrait smart reframing and editable clip sequences
-
-## Phase 3: Autonomous orchestration
-- Durable queue + restart recovery, scheduler, operational alerts, dead-letter queue
-- Analytics and engagement APIs with approval-gated public actions
-- Controlled experiments with minimum sample sizes, no invented causal claims
-- Multi-game content allocation based on measured engagement
-- Local memory of approved scripts, video data, audience themes, rights evidence
-- Periodic credential/token health checks and backup/restore
-
-## Safety principles
-- Publishing requires explicit approval by default
-- Never fabricate gameplay, analytics, engagement, or licensing
-- Use only footage you control or have permission to reuse
-- No engagement bots/spam, fake giveaways, or impersonation
-- Enforce no-paid-API configuration in code, not only natural-language instructions
+Until V0.6, no real publishing occurs.
