@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+data/*
+!data/.gitkeep
+media/raw/*
+!media/raw/.gitkeep
+media/output/*
+!media/output/.gitkeep
+config/credentials.json
+config/*token*.json

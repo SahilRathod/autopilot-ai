@@ -1,0 +1,12 @@
+{
+  "channel_name": "Hinglish Gaming",
+  "language": "Hinglish",
+  "timezone": "Asia/Kolkata",
+  "budget_inr": 0,
+  "games": ["Valorant", "BGMI", "Minecraft", "GTA V", "Rocket League"],
+  "weekly_long_videos": 1,
+  "weekly_shorts": 3,
+  "require_human_approval": true,
+  "publishing_mode": "dry_run",
+  "blocked_topics": ["fake giveaways", "unlicensed music", "fabricated gameplay"]
+}
