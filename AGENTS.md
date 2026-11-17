@@ -32,3 +32,10 @@ Do not disable TLS verification to work around npm errors or add unapproved paid
 - Protect approved-job state and workspace/channel scoping before rendering.
 - Bounded scans run only on explicit local CLI/API invocation; do not automatically scan every uploaded video.
 - Validate imported media against its original SHA-256 fingerprint before scanning/rendering. Do not change original files.
+
+## V0.5 milestone 2 preview boundaries
+
+- Browser video preview must only stream an already-registered asset under `media/raw/` belonging to the requested local workspace/channel. Never accept arbitrary file paths or URLs from the preview route.
+- Range streaming stays loopback-only without SaaS authentication. Validate original media freshness before serving and avoid rehashing on every seek.
+- Only MP4/WebM browser previews are advertised; codec support varies. Never claim that scene transitions identify important game events.
+- Keep the selected clip duration bounded and require an existing approved production job to create a rendered output.

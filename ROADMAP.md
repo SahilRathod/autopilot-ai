@@ -30,3 +30,9 @@ Until V0.6, no real publishing occurs.
 - Implemented: local FFprobe metadata, SHA-256 source checking, per-channel media assets, bounded FFmpeg visual scene transitions, suggested clip windows, approved-job render handoff, Python CLI and FastAPI routes.
 - Next milestones: candidate preview in dashboard, real gameplay-event heuristics, captions, audio handling, validated media manifests and media-production scheduling.
 - No live uploads or automatic publishing.
+
+## V0.5 milestone 2 — video preview studio
+
+- Integrated Media Studio tab with channel library, native browser playback, visual scene markers, bounded candidate playback, and explicit approved-job rendering.
+- Added scoped no-store HTTP range streaming for registered MP4/WebM originals; file integrity cached by size and high-resolution timestamps.
+- Next: richer timeline editing, frame thumbnails, caption support, audio/music processing with rights checks, and true gameplay-event analysis.

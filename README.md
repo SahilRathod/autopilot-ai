@@ -1,6 +1,13 @@
-# Autopilot AI — Media Intelligence V0.5 (first milestone)
+# Autopilot AI — V0.5 Media Preview Studio
 
 Local-first, multi-channel AI drafting and **V0.5 media analysis** foundation. Still not an autonomous video generator or YouTube uploader.
+
+## V0.5 milestone 2 — Video Preview Studio
+- New **Media Studio** dashboard tab: channel-scoped media library, HTML video preview, visual scene markers and candidate clips.
+- Preview original MP4/WebM files locally with browser byte-range seeking. Repeated range requests reuse a cached source hash until file size/timestamps change.
+- Register footage already in `media/raw/` by filename; perform bounded scene scans and play a selected clip interval.
+- Render a selected candidate only against a reviewed, approved job belonging to the same channel. **No publishing, uploads or external API costs.**
+- Full setup and limitations: [V0.5 Milestone 2 Guide](V05_M2_GUIDE.md).
 
 ## V0.5 media intelligence (milestone 1)
 - Import original footage by local filename under `media/raw/`, with FFprobe metadata and SHA-256 source verification.
@@ -30,7 +37,7 @@ Local-first, multi-channel AI drafting and **V0.5 media analysis** foundation. S
 - Offline zero-cost defaults, optional explicitly enabled Gemini API calls. No YouTube uploads or background jobs.
 
 ## Windows quick start
-Requirements: Python 3.11+, Node.js >=20.9, Git. FFmpeg only for legacy clip rendering.
+Requirements: Python 3.11+, Node.js >=20.9, Git. FFmpeg/FFprobe required for media import, scene analysis, and rendering.
 
 **Terminal 1 (repository root)**
 ```powershell
