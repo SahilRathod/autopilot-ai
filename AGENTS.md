@@ -1,6 +1,6 @@
 # Autopilot AI agent guidance
 
-This repository is a local-first Python/FastAPI + Next.js TypeScript project. Read `README.md` and `V04_GUIDE.md` before changing product behavior. Current V0.4 drafts content but does **not** upload to YouTube. Never imply that local jobs represent uploads. Keep the unauthenticated API bound to 127.0.0.1.
+This repository is a local-first Python/FastAPI + Next.js TypeScript project. Read `README.md` and `V041_GUIDE.md` before changing product behavior. Current V0.4.1 drafts content but does **not** upload to YouTube. Never imply that local jobs represent uploads. Keep the unauthenticated API bound to 127.0.0.1.
 
 ## Installed coding skills
 
@@ -16,3 +16,11 @@ The repo includes 15 Superpowers skills and 6 Ponytail skills at `.agents/skills
 At repository root: `py -3 -m unittest discover -s tests -v`.
 For the web app, when npm dependencies are available: run `npm run typecheck` and `npm run build` inside `apps/web`.
 Do not disable TLS verification to work around npm errors or add unapproved paid cloud integrations.
+
+## V0.5 maintenance gate
+
+- The multi-channel production database is `data/platform.sqlite3`. The legacy `data/agent.sqlite3` database is **not** migrated; never silently move or delete either.
+- Manual FFmpeg renders require an approved production job, and failed/partial output must never be published as a final file. Encode to an output-directory staging path and atomically publish only on success.
+- Keep cloud generation explicit and quota-limited. No API key in logs or code, and no paid fallback.
+- Until a tracked npm lockfile can be generated through a trusted TLS connection, keep CI checking TypeScript and production builds with npm install; do not claim reproducible web installs.
+- Before merging a V0.5 feature, include a failing regression test for its intended behavior, verify the full Python suite and Next.js build in CI, and confirm actual source footage use is authorized.
