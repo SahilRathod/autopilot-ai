@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 
-from app import editor, media_intelligence as media, platform_core as core
+from app import editor, media_intelligence as media, platform_core as core, highlight_ranker as ranker
 from apps.api.main import app
 
 
@@ -96,6 +96,44 @@ class MediaAPITests(unittest.TestCase):
         response = self.client.get(base + f"/assets/{asset['id']}/preview")
         self.assertEqual(response.status_code, 409)
         self.assertIn("changed", response.json()["detail"].lower())
+
+
+    def test_ranked_candidate_endpoint_returns_explainable_local_scores(self):
+        base = f"/api/v1/workspaces/{self.w}/channels/{self.c}/media"
+        other = f"/api/v1/workspaces/{self.other}/channels/{self.other_c}/media"
+        with patch.object(media, "probe_metadata", return_value=self.meta):
+            asset = self.client.post(base + "/import", json={"filename": "raw.mp4"}).json()
+        with patch.object(media, "detect_changes", return_value=[12, 29]):
+            scan = self.client.post(base + f"/assets/{asset['id']}/scan",
+                                    json={"clip_seconds": 10})
+        self.assertEqual(scan.status_code, 200)
+        ranking = self.client.post(base + f"/assets/{asset['id']}/rank",
+                                   json={"profile": "sandbox", "max_seconds": 100})
+        self.assertEqual(ranking.status_code, 200)
+        rows = ranking.json()
+        self.assertGreaterEqual(len(rows), 2)
+        self.assertEqual(rows[0]["profile"], "sandbox")
+        self.assertIn("reasons", rows[0]["evidence"])
+        self.assertEqual(rows[0]["audio_analyzed"], False)
+        response = self.client.get(base + f"/assets/{asset['id']}/rankings?profile=sandbox")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), rows)
+        self.assertEqual(self.client.get(other + f"/assets/{asset['id']}/rankings?profile=sandbox").status_code, 404)
+        self.assertEqual(self.client.post(base + f"/assets/{asset['id']}/rank",
+                                         json={"profile": "imaginary"}).status_code, 422)
+
+    def test_ranking_requires_scene_scan_and_is_reset_by_rescan(self):
+        base = f"/api/v1/workspaces/{self.w}/channels/{self.c}/media"
+        with patch.object(media, "probe_metadata", return_value=self.meta):
+            asset = self.client.post(base + "/import", json={"filename": "raw.mp4"}).json()
+        target = base + f"/assets/{asset['id']}"
+        self.assertEqual(self.client.post(target + "/rank", json={}).status_code, 409)
+        with patch.object(media, "detect_changes", return_value=[]):
+            self.assertEqual(self.client.post(target + "/scan", json={}).status_code, 200)
+        self.assertEqual(self.client.post(target + "/rank", json={}).status_code, 200)
+        with patch.object(media, "detect_changes", return_value=[22]):
+            self.assertEqual(self.client.post(target + "/scan", json={}).status_code, 200)
+        self.assertEqual(self.client.get(target + "/rankings").json(), [])
 
     def test_api_rejects_bad_input(self):
         base = f"/api/v1/workspaces/{self.w}/channels/{self.c}/media"
