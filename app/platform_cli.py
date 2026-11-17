@@ -1,7 +1,7 @@
 """Independent CLI for the multi-channel foundation."""
 import argparse
 import json
-from . import platform_core as core, media_pipeline, media_intelligence
+from . import platform_core as core, media_pipeline, media_intelligence, highlight_ranker
 
 def main():
     p=argparse.ArgumentParser(description='Autopilot AI local multi-channel base')
@@ -37,6 +37,17 @@ def main():
     suggestions.add_argument('--workspace',type=int,required=True)
     suggestions.add_argument('--channel',type=int,required=True)
     suggestions.add_argument('--asset',type=int,required=True)
+    score=s.add_parser('media-rank')
+    score.add_argument('--workspace',type=int,required=True)
+    score.add_argument('--channel',type=int,required=True)
+    score.add_argument('--asset',type=int,required=True)
+    score.add_argument('--profile',choices=('balanced','tactical','sandbox'),default='balanced')
+    score.add_argument('--scan-seconds',type=float,default=120)
+    ranked=s.add_parser('media-rankings')
+    ranked.add_argument('--workspace',type=int,required=True)
+    ranked.add_argument('--channel',type=int,required=True)
+    ranked.add_argument('--asset',type=int,required=True)
+    ranked.add_argument('--profile',choices=('balanced','tactical','sandbox'),default='balanced')
     chosen=s.add_parser('media-render')
     chosen.add_argument('--workspace',type=int,required=True)
     chosen.add_argument('--channel',type=int,required=True)
@@ -61,6 +72,12 @@ def main():
                                                  args.seconds,args.threshold,args.scan_seconds)
         elif args.action=='media-candidates':
             result=media_intelligence.candidates(args.workspace,args.channel,args.asset)
+        elif args.action=='media-rank':
+            result=highlight_ranker.rank_asset(args.workspace,args.channel,args.asset,
+                                                args.profile,args.scan_seconds)
+        elif args.action=='media-rankings':
+            result=highlight_ranker.rankings(args.workspace,args.channel,args.asset,
+                                             args.profile)
         elif args.action=='media-render':
             result=media_intelligence.render_candidate(args.workspace,args.channel,
                                                        args.candidate,args.job)

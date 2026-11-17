@@ -1,9 +1,10 @@
 """Loopback-only local media intelligence API, scoped to workspace/channel."""
-from fastapi import APIRouter, HTTPException, Path
+from typing import Literal
+from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from app import media_intelligence as media
+from app import media_intelligence as media, highlight_ranker as ranker
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/channels/{channel_id}/media",
                    tags=["V0.5 Media Intelligence"])
@@ -22,6 +23,12 @@ class Scan(Strict):
     threshold: float = Field(default=0.35, ge=0.05, le=0.95, allow_inf_nan=False)
     max_scan_seconds: float = Field(default=120, ge=2, le=600, allow_inf_nan=False)
 
+
+
+
+class RankingRequest(Strict):
+    profile: Literal["balanced", "tactical", "sandbox"] = "balanced"
+    max_seconds: float = Field(default=120, gt=0, le=600, allow_inf_nan=False)
 
 class Render(Strict):
     job_id: int = Field(ge=1)
@@ -96,3 +103,18 @@ def preview_asset(workspace_id: int = Path(ge=1), channel_id: int = Path(ge=1),
                  "X-Content-Type-Options": "nosniff",
                  "Accept-Ranges": "bytes"},
     )
+
+
+@router.post("/assets/{asset_id}/rank")
+def rank_candidates(body: RankingRequest, workspace_id: int = Path(ge=1),
+                    channel_id: int = Path(ge=1), asset_id: int = Path(ge=1)):
+    """Compute local audio/visual heuristic rankings. Does NOT detect game events."""
+    return checked(ranker.rank_asset, workspace_id, channel_id, asset_id,
+                   body.profile, body.max_seconds)
+
+
+@router.get("/assets/{asset_id}/rankings")
+def get_rankings(workspace_id: int = Path(ge=1), channel_id: int = Path(ge=1),
+                 asset_id: int = Path(ge=1),
+                 profile: Literal["balanced", "tactical", "sandbox"] = Query(default="balanced")):
+    return checked(ranker.rankings, workspace_id, channel_id, asset_id, profile)
