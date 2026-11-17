@@ -12,6 +12,13 @@ type Candidate = {
   reason: 'opening_segment' | 'scene_change';
 };
 type RenderResult = { job_id: number; output_path: string; youtube_uploaded: boolean };
+type RankProfile = 'balanced' | 'tactical' | 'sandbox';
+type RankedClip = {
+  candidate_id: number; score: number; profile: RankProfile; audio_analyzed: boolean;
+  audio_score: number; visual_score: number;
+  evidence: { signals: { audio_transient: string; visual_transition: boolean };
+              reasons: string[]; claims: string };
+};
 const clock = (value: number) => {
   const secs = Math.max(0, Math.floor(value));
   return Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
@@ -28,6 +35,8 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
   const [filename, setFilename] = useState('');
   const [clipSeconds, setClipSeconds] = useState(30);
   const [threshold, setThreshold] = useState(0.35);
+  const [profile, setProfile] = useState<RankProfile>('balanced');
+  const [ranked, setRanked] = useState<RankedClip[]>([]);
   const [jobId, setJobId] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -39,6 +48,14 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
   const selectedAsset = assets.find(a => a.id === assetId);
   const selected = candidates.find(c => c.id === selectedId);
   const approvedJobs = jobs.filter(j => j.channel_id === channelId && j.state === 'approved');
+  const rankingByCandidate = new Map(ranked.map(row => [row.candidate_id, row]));
+  const sortedCandidates = [...candidates].sort((a, b) => {
+    const left = rankingByCandidate.get(a.id);
+    const right = rankingByCandidate.get(b.id);
+    return left && right ? right.score - left.score || a.start_seconds - b.start_seconds
+      : left ? -1 : right ? 1 : a.start_seconds - b.start_seconds;
+  });
+  const selectedRanking = selected ? rankingByCandidate.get(selected.id) : undefined;
 
   useEffect(() => {
     if (!channels.some(c => c.id === channelId)) setChannelId(channels[0]?.id ?? null);
@@ -47,7 +64,7 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
   useEffect(() => {
     let active = true;
     setAssets([]); setAssetId(null); setCandidates([]); setSelectedId(null);
-    setJobId(null); setNotice(''); setError(''); setPlayerError(''); setPreviewing(false);
+    setJobId(null); setNotice(''); setError(''); setPlayerError(''); setPreviewing(false); setRanked([]);
     if (base) api<Asset[]>(base + '/assets').then(items => {
       if (active) { setAssets(items); setAssetId(items[0]?.id ?? null); }
     }).catch(e => { if (active) setError(String(e)); });
@@ -56,7 +73,7 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
 
   useEffect(() => {
     let active = true;
-    setCandidates([]); setSelectedId(null); setPreviewing(false); setPlayerError('');
+    setCandidates([]); setSelectedId(null); setPreviewing(false); setPlayerError(''); setRanked([]);
     if (base && assetId !== null) {
       api<Candidate[]>(base + '/assets/' + assetId + '/candidates').then(items => {
         if (active) { setCandidates(items); setSelectedId(items[0]?.id ?? null); }
@@ -64,6 +81,17 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
     }
     return () => { active = false; };
   }, [base, assetId]);
+
+  useEffect(() => {
+    let active = true;
+    setRanked([]);
+    if (base && assetId !== null) {
+      api<RankedClip[]>(base + '/assets/' + assetId + '/rankings?profile=' + profile)
+        .then(rows => { if (active) setRanked(rows); })
+        .catch(e => { if (active) setError(e instanceof Error ? e.message : String(e)); });
+    }
+    return () => { active = false; };
+  }, [base, assetId, profile]);
 
   useEffect(() => {
     if (jobId !== null && !approvedJobs.some(j => j.id === jobId)) setJobId(null);
@@ -120,9 +148,22 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
         }),
       });
       const updated = await api<Candidate[]>(base + '/assets/' + assetId + '/candidates');
-      setCandidates(updated); setSelectedId(updated[0]?.id ?? null);
+      setCandidates(updated); setSelectedId(updated[0]?.id ?? null); setRanked([]);
       setNotice(updated.length + ' visual candidate clips found. Inspect each before rendering.');
     } catch(e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(false); }
+  }
+
+  async function rankClips() {
+    if (!base || assetId === null || !candidates.length) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const results = await api<RankedClip[]>(base + '/assets/' + assetId + '/rank', {
+        method: 'POST', body: JSON.stringify({profile, max_seconds: 120}),
+      });
+      setRanked(results);
+      setNotice('Ranked ' + results.length + ' clips using local audio/visual heuristics. Scores are not gameplay-event predictions.');
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   }
 
@@ -223,22 +264,38 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
             {busy ? 'Analyzing…' : 'Find candidate clips'}
           </button>
         </div>
-        <div className="tip">The scan examines up to the first 120 seconds at reduced resolution.
-          Suggestions are not ranked highlights and do not modify the source.</div>
+        <label className="media-field">Clip-ranking preset
+          <select aria-label="Clip-ranking preset" value={profile}
+            onChange={e => setProfile(e.target.value as RankProfile)} disabled={busy}>
+            <option value="balanced">Balanced · mixed gaming</option>
+            <option value="tactical">Tactical action · Valorant / CS-style</option>
+            <option value="sandbox">Sandbox exploration · Minecraft-style</option>
+          </select>
+        </label>
+        <button className="button outline" type="button" onClick={rankClips}
+          disabled={busy || assetId === null || !candidates.length}>
+          {busy ? 'Working…' : 'Rank clips locally'}
+        </button>
+        <div className="tip">Scanning finds visual transitions. Ranking combines those candidates with
+          relative audio-energy spikes and a user-selected preset. No game-specific kills,
+          wins, or other events are recognized. The original file stays untouched.</div>
       </section>
     </div>
     {selectedAsset && <section className="panel">
       <div className="panel-heading"><div><h2>Clip candidates</h2>
-        <p>Select a candidate to seek in the video player above.</p></div>
+        <p>Choose and preview potential clips. Scores reflect heuristics, not actual highlight certainty.</p></div>
         <span className="chip">{candidates.length} candidates</span></div>
       {candidates.length ? <div className="media-candidate-grid">
-        {candidates.map((c,i) => <button type="button" key={c.id}
+        {sortedCandidates.map((c,i) => <button type="button" key={c.id}
           onClick={() => seek(c)} aria-pressed={c.id === selectedId}
           className={'media-candidate ' + (c.id === selectedId ? 'active' : '')}>
           <span className="media-candidate-index">{String(i+1).padStart(2,'0')}</span>
           <strong>{c.reason === 'opening_segment' ? 'Opening clip' : 'Scene transition'}</strong>
           <small>{clock(c.start_seconds)} – {clock(c.start_seconds+c.duration_seconds)}</small>
           <small>{Math.round(c.duration_seconds)} seconds</small>
+          {rankingByCandidate.has(c.id) && <span className="media-rank-score">
+            Heuristic score {rankingByCandidate.get(c.id)?.score}/100
+          </span>}
         </button>)}
       </div> : <div className="empty-small">Scan the footage to generate potential clips.</div>}
       {selected && <div className="media-review">
@@ -246,6 +303,12 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
           <p>{clock(selected.start_seconds)} to {clock(selected.start_seconds + selected.duration_seconds)}.
           Watch the section above before rendering.</p>
         </div>
+        {selectedRanking && <div className="media-rank-explanation">
+          <strong>Why this clip was recommended · {selectedRanking.score}/100</strong>
+          <ul>{selectedRanking.evidence.reasons.map((reason,i) => <li key={i}>{reason}</li>)}</ul>
+          <small>Audio: {selectedRanking.evidence.signals.audio_transient}. These are
+          visual/audio signals only, not predictions of game events.</small>
+        </div>}
         <button className="button outline" type="button" onClick={playSelected}>
           {previewing ? 'Restart selected clip' : 'Play selected clip'}
         </button>
