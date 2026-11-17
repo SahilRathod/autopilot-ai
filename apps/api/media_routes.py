@@ -83,7 +83,7 @@ def preview_asset(workspace_id: int = Path(ge=1), channel_id: int = Path(ge=1),
     """Serve only the registered original for this channel; Starlette handles byte ranges."""
     record = checked(media.asset, workspace_id, channel_id, asset_id)
     try:
-        source = media._validated_source(record)
+        source = media.preview_source(record)
     except (FileNotFoundError, OSError, ValueError) as exc:
         raise HTTPException(409, detail="Imported media has changed or is missing; import again") from exc
     # Browser playback is not guaranteed for other video containers/codecs.
