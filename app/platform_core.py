@@ -104,7 +104,11 @@ def transition(workspace_id,job_id,target):
         if job is None: raise ValueError('Job not found in workspace')
         if target not in STATES[job['state']]: raise ValueError('Invalid transition %s -> %s' % (job['state'],target))
         # Queued represents local intent, NOT an external upload; permissions remain disabled by default.
-        c.execute('UPDATE production_jobs SET state=? WHERE id=? AND workspace_id=?', (target,job_id,workspace_id))
+        changed = c.execute(
+            'UPDATE production_jobs SET state=? WHERE id=? AND workspace_id=? AND state=?',
+            (target, job_id, workspace_id, job['state']))
+        if changed.rowcount != 1:
+            raise ValueError('Job state changed concurrently; refresh before retrying')
         c.execute('INSERT INTO audit_log(workspace_id,channel_id,job_id,action) VALUES(?,?,?,?)',
                   (workspace_id,job['channel_id'],job_id,'state_'+target))
 

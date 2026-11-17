@@ -1,7 +1,7 @@
 """Independent CLI for the multi-channel foundation."""
 import argparse
 import json
-from . import platform_core as core
+from . import platform_core as core, media_pipeline
 
 def main():
     p=argparse.ArgumentParser(description='Autopilot AI local multi-channel base')
@@ -13,6 +13,12 @@ def main():
     add=s.add_parser('job-add');add.add_argument('--workspace',type=int,required=True);add.add_argument('--channel',type=int,required=True);add.add_argument('--title',required=True);add.add_argument('--format',choices=['short','long'],required=True)
     jobs=s.add_parser('jobs');jobs.add_argument('--workspace',type=int,required=True);jobs.add_argument('--channel',type=int)
     update=s.add_parser('transition');update.add_argument('--workspace',type=int,required=True);update.add_argument('--job',type=int,required=True);update.add_argument('--to',choices=list(core.STATES))
+    render=s.add_parser('render-job')
+    render.add_argument('--workspace',type=int,required=True)
+    render.add_argument('--job',type=int,required=True)
+    render.add_argument('--source',required=True,help='Video filename in media/raw/')
+    render.add_argument('--start',type=float,default=0)
+    render.add_argument('--seconds',type=float,default=30)
     log=s.add_parser('audit');log.add_argument('--workspace',type=int,required=True)
     args=p.parse_args()
     core.initialize()
@@ -23,6 +29,8 @@ def main():
         elif args.action=='channels': result=core.channels(args.workspace)
         elif args.action=='job-add': result={'job_id':core.add_job(args.workspace,args.channel,args.title,args.format)}
         elif args.action=='jobs': result=core.jobs(args.workspace,args.channel)
+        elif args.action=='render-job':
+            result=media_pipeline.render_job(args.workspace,args.job,args.source,args.start,args.seconds)
         elif args.action=='transition': core.transition(args.workspace,args.job,args.to);result={'status':args.to,'external_upload':False}
         else: result=core.audit(args.workspace)
         print(json.dumps(result,indent=2,ensure_ascii=False))
