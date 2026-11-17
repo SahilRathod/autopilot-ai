@@ -3,11 +3,12 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type AuditEvent, type Channel, type Overview, type ProductionJob, type Workspace } from '../lib/api';
 
-type Section = 'overview' | 'channels' | 'production' | 'reviews' | 'activity';
+type Section = 'overview' | 'channels' | 'production' | 'ai' | 'reviews' | 'activity';
 const nav: { id: Section; icon: string; label: string }[] = [
   { id: 'overview', icon: '◫', label: 'Overview' },
   { id: 'channels', icon: '▣', label: 'Channels' },
   { id: 'production', icon: '▤', label: 'Production queue' },
+  { id: 'ai', icon: '✦', label: 'AI Director' },
   { id: 'reviews', icon: '✓', label: 'Approval center' },
   { id: 'activity', icon: '◷', label: 'Activity history' },
 ];
@@ -115,7 +116,7 @@ export default function Studio() {
       </select></div>
       <p className="overline nav-label">MANAGE</p>
       <nav className="navigation">{nav.map(n => <button className={'nav-item ' + (section === n.id ? 'active':'')} key={n.id} onClick={() => setSection(n.id)}><span className="nav-icon">{n.icon}</span>{n.label}{n.id === 'reviews' && !!overview?.pending_review && <span className="nav-count">{overview.pending_review}</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><span className="status-dot"/> LOCAL MODE <span className="version">V0.3</span><p>Nothing is published to YouTube. You approve every action.</p></div>
+      <div className="sidebar-bottom"><span className="status-dot"/> LOCAL MODE <span className="version">V0.4.1</span><p>Nothing is published to YouTube. You approve every action.</p></div>
     </aside>
     <main className="main-area">
       <header className="topbar"><div className="breadcrumbs">Studio <span>/</span> {nav.find(n => n.id === section)?.label}</div><div className="top-actions"><span className="chip">₹0 API budget</span><span className="chip muted">YouTube disconnected</span></div></header>
@@ -135,18 +136,154 @@ export default function Studio() {
               <div className="two-col"><section className="panel"><div className="panel-heading"><div><h2>Production pipeline</h2><p>Live status of your locally tracked work</p></div></div>
                 <div className="pipeline">{['draft','ready_for_review','approved','queued','completed'].map(state => <div className="pipeline-step" key={state}><span className={'pipeline-number '+state}>{overview?.states[state] ?? 0}</span><small>{displayState(state)}</small></div>)}</div>
                 <button className="text-link" onClick={() => setSection('production')}>View all production jobs →</button>
-              </section><section className="panel"><div className="panel-heading"><div><h2>Platform readiness</h2><p>Clear status, no simulated analytics</p></div></div><div className="readiness-row"><span className="round-check">✓</span><div><strong>Local workspace engine</strong><small>Ready for channel and job management</small></div></div><div className="readiness-row"><span className="round-soon">·</span><div><strong>AI Director</strong><small>Planned for V0.4</small></div></div><div className="readiness-row"><span className="round-soon">·</span><div><strong>YouTube publishing</strong><small>Not connected or enabled</small></div></div></section></div>
+              </section><section className="panel"><div className="panel-heading"><div><h2>Platform readiness</h2><p>Clear status, no simulated analytics</p></div></div><div className="readiness-row"><span className="round-check">✓</span><div><strong>Local workspace engine</strong><small>Ready for channel and job management</small></div></div><div className="readiness-row"><span className="round-check">✓</span><div><strong>AI Director</strong><small>Generate offline or optional Gemini content packs</small></div></div><div className="readiness-row"><span className="round-soon">·</span><div><strong>YouTube publishing</strong><small>Not connected or enabled</small></div></div></section></div>
               <section className="panel"><div className="panel-heading"><div><h2>Recent production</h2><p>Latest video jobs from all your channels</p></div><button className="text-link" onClick={() => setSection('production')}>Manage queue →</button></div><JobList jobs={jobs.slice(0,5)} channelName={nameOfChannel} disabled={busy} onTransition={transition}/></section>
             </>}
+            {section === 'ai' && workspaceId !== null && <AIDirector workspaceId={workspaceId} channels={channels} onSubmitted={() => reloadCurrent(workspaceId).catch(e => setError(String(e)))}/>}
             {section === 'channels' && <div className="two-col main-sidebar"><section className="panel"><div className="panel-heading"><div><h2>Your channels</h2><p>Each channel has separate content and budgets</p></div><span className="chip">{channels.length} total</span></div><div className="channel-grid">{channels.length ? channels.map(c => <div className="channel-card" key={c.id}><div className="channel-avatar">{c.name[0].toUpperCase()}</div><div><h3>{c.name}</h3><p>{c.niche} · {c.language}</p><small>₹{c.budget_inr}/month · Publishing disabled</small></div></div>) : <div className="empty-small">No channels yet. Add your first one →</div>}</div></section><section className="panel"><h2>Add a channel</h2><p>Start with gaming, then add any content niche.</p><form className="stack-form" onSubmit={addChannel}><label>Channel name<input required maxLength={100} placeholder="e.g. Gaming Universe" value={channelName} onChange={e=>setChannelName(e.target.value)}/></label><label>Content niche<input required maxLength={80} value={channelNiche} onChange={e=>setChannelNiche(e.target.value)}/></label><label>Language<input required maxLength={40} value={channelLanguage} onChange={e=>setChannelLanguage(e.target.value)}/></label><button className="button primary" disabled={busy}>+ Add channel</button></form></section></div>}
             {section === 'production' && <div className="two-col main-sidebar"><section className="panel"><div className="panel-heading"><div><h2>Production jobs</h2><p>Draft → review → approve → local queue</p></div><select aria-label="Filter by channel" value={filterChannel} onChange={e=>setFilterChannel(e.target.value)}><option value="all">All channels</option>{channels.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></div><JobList jobs={filteredJobs} channelName={nameOfChannel} onTransition={transition} disabled={busy}/></section><section className="panel"><h2>New production job</h2><p>Creates a local draft, not a rendered video.</p><form className="stack-form" onSubmit={addJob}><label>Channel<select required value={jobChannelId} onChange={e=>setJobChannelId(e.target.value)}>{channels.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></label><label>Video title<input required maxLength={200} placeholder="e.g. Valorant Beginner Tips" value={jobTitle} onChange={e=>setJobTitle(e.target.value)}/></label><label>Video format<select value={jobFormat} onChange={e=>setJobFormat(e.target.value as 'short'|'long')}><option value="short">Short / vertical</option><option value="long">Long-form</option></select></label><button className="button primary" disabled={busy || !channels.length}>+ Create draft</button></form><div className="tip">Video editing is currently available through the legacy FFmpeg CLI. Linking rendered files to this queue comes in a future upgrade.</div></section></div>}
             {section === 'reviews' && <section className="panel"><div className="panel-heading"><div><h2>Pending decisions</h2><p>Review work before it can enter the local queue</p></div><span className="chip">{reviewJobs.length} items</span></div><JobList jobs={reviewJobs} channelName={nameOfChannel} disabled={busy} onTransition={transition}/><div className="tip">“Approve” changes local workflow status only. No upload, publication or API spending occurs.</div></section>}
             {section === 'activity' && <section className="panel"><div className="panel-heading"><div><h2>Audit trail</h2><p>Recorded actions in this workspace</p></div><span className="chip">Recent {activity.length}</span></div>{activity.length ? <div className="audit-list">{activity.map(item=><div key={item.id} className="audit-row"><span className="audit-icon">◷</span><div><strong>{displayState(item.action)}</strong><small>{item.channel_id ? `Channel #${item.channel_id}` : 'Workspace'}{item.job_id ? ` · Job #${item.job_id}` : ''}</small></div><time>{item.created_at}</time></div>)}</div> : <div className="empty-small">No activity yet.</div>}</section>}
           </>}
         </>}
-        <footer className="footer"><span>Autopilot AI V0.3 · Local-first foundation</span><span>Publishing, AI generation and SaaS authentication: not enabled</span></footer>
+        <footer className="footer"><span>Autopilot AI V0.4.1 · Local-first studio</span><span>Publishing and SaaS authentication: not enabled</span></footer>
       </div>
     </main>
+  </div>;
+}
+
+type ContentPack = {
+  title: string; hook: string; script: string; description: string;
+  outline: string[]; keywords: string[]; shorts: string[]; research_needed: string[];
+};
+type AIDraft = { id: number; job_id: number | null; provider: string; topic: string;
+  format: 'short' | 'long'; cached?: boolean; result: ContentPack };
+type AIStatus = { offline_ready: boolean; gemini_configured: boolean; model: string };
+
+function AIDirector({workspaceId, channels, onSubmitted}: {
+  workspaceId: number; channels: Channel[]; onSubmitted: () => void;
+}) {
+  const [channelId, setChannelId] = useState<number | null>(channels[0]?.id ?? null);
+  const [topic, setTopic] = useState('');
+  const [format, setFormat] = useState<'short'|'long'>('short');
+  const [provider, setProvider] = useState<'offline'|'gemini'>('offline');
+  const [aiStatus, setAIStatus] = useState<AIStatus|null>(null);
+  const [drafts, setDrafts] = useState<AIDraft[]>([]);
+  const [activeDraft, setActiveDraft] = useState<AIDraft|null>(null);
+  const [tone, setTone] = useState('');
+  const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setChannelId(channels[0]?.id ?? null); setActiveDraft(null);
+  }, [workspaceId, channels]);
+
+  const base = channelId === null ? '' : '/workspaces/' + workspaceId +
+    '/channels/' + channelId + '/ai';
+
+  const refresh = useCallback(async (path: string) => {
+    const [status, saved, notes] = await Promise.all([
+      api<AIStatus>(path + '/status'),
+      api<AIDraft[]>(path + '/drafts'),
+      api<Record<string,string>>(path + '/memory'),
+    ]);
+    setAIStatus(status); setDrafts(saved); setTone(notes.tone ?? '');
+    setActiveDraft(current => saved.find(d => d.id === current?.id) ?? saved[0] ?? null);
+  }, []);
+
+  useEffect(() => {
+    if (!base) {setAIStatus(null);setDrafts([]);setActiveDraft(null); return;}
+    setError('');
+    refresh(base).catch(e => setError(e instanceof Error ? e.message : String(e)));
+  }, [base, refresh]);
+
+  async function generate(e: FormEvent) {
+    e.preventDefault(); if (!base) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const draft = await api<AIDraft>(base + '/generate', {
+        method:'POST', body:JSON.stringify({topic,format,provider}),
+      });
+      setActiveDraft(draft);
+      setNotice(draft.cached ? 'Reused cached content pack.' : 'New content pack saved as draft.');
+      await refresh(base);
+      setActiveDraft(draft);
+    } catch(e) {setError(e instanceof Error ? e.message : String(e));}
+    finally {setBusy(false);}
+  }
+  async function saveTone(e: FormEvent) {
+    e.preventDefault(); if (!base || !tone.trim()) return;
+    setBusy(true); setError('');
+    try {
+      await api(base + '/memory/tone',{method:'PUT',body:JSON.stringify({value:tone})});
+      setNotice('Channel preference saved. New content packs will use it.');
+    } catch(e) {setError(e instanceof Error ? e.message : String(e));}
+    finally {setBusy(false);}
+  }
+  async function submit(draft: AIDraft) {
+    if (!base) return;
+    setBusy(true);setError('');
+    try {
+      const job = await api<{job_id:number}>(base+'/drafts/'+draft.id+'/submit',{method:'POST'});
+      setNotice('Linked to unapproved production job #'+job.job_id+'. Review before queuing.');
+      await refresh(base);onSubmitted();
+    } catch(e) {setError(e instanceof Error ? e.message : String(e));}
+    finally {setBusy(false);}
+  }
+
+  return <div className="two-col main-sidebar">
+    <section className="panel">
+      <div className="panel-heading"><div><h2>AI content director</h2>
+        <p>Generate channel-specific drafts. Nothing is published automatically.</p></div></div>
+      {error && <div role="alert" className="notice danger">{error}</div>}
+      {notice && <div role="status" className="notice success">{notice}</div>}
+      {!channels.length ? <p>Create a channel first to start drafting.</p> : <>
+        <form className="stack-form" onSubmit={generate}>
+          <label>Channel<select aria-label="AI channel" value={channelId ?? ''} onChange={e => setChannelId(Number(e.target.value))}>
+            {channels.map(ch => <option key={ch.id} value={ch.id}>{ch.name} · {ch.language}</option>)}
+          </select></label>
+          <label>Topic<input required minLength={3} maxLength={180} placeholder="e.g. Valorant beginner tips" value={topic} onChange={e=>setTopic(e.target.value)}/></label>
+          <label>Format<select value={format} onChange={e => setFormat(e.target.value as 'short'|'long')}>
+            <option value="short">Short</option><option value="long">Long-form</option>
+          </select></label>
+          <label>Provider<select value={provider} onChange={e => setProvider(e.target.value as 'offline'|'gemini')}>
+            <option value="offline">Offline template · ₹0</option>
+            <option value="gemini" disabled={!aiStatus?.gemini_configured}>Gemini · requires verified free-tier project</option>
+          </select></label>
+          <button className="button primary" disabled={busy || !channelId || !topic.trim()}>{busy ? 'Working…':'Generate draft'}</button>
+        </form>
+        <div className="tip">Offline mode generates editable templates, not factual research. Gemini availability depends on your project settings.</div>
+        <h2>Saved drafts</h2>
+        <div className="stack-form">
+          <label>Preview saved draft<select aria-label="Select AI draft" value={activeDraft?.id ?? ''} onChange={e=>setActiveDraft(drafts.find(d=>d.id===Number(e.target.value))??null)}>
+            <option value="">Choose a draft</option>
+            {drafts.map(d=><option key={d.id} value={d.id}>#{d.id} · {d.topic} ({d.format})</option>)}
+          </select></label>
+        </div>
+        {activeDraft && <div className="panel" style={{marginTop:16}}>
+          <h2>{activeDraft.result.title}</h2>
+          <p>{activeDraft.result.hook}</p>
+          <h3>Script / outline</h3>
+          <pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit'}}>{activeDraft.result.script}</pre>
+          <h3>Video description</h3><p>{activeDraft.result.description}</p>
+          <h3>Keywords</h3><p>{activeDraft.result.keywords.join(', ')}</p>
+          <h3>Research checklist</h3><ul>{activeDraft.result.research_needed.map((item,i)=><li key={i}>{item}</li>)}</ul>
+          <button className="button primary" disabled={busy || activeDraft.job_id !== null} onClick={()=>submit(activeDraft)}>
+            {activeDraft.job_id ? 'Already linked to job #'+activeDraft.job_id : 'Send to production drafts'}
+          </button>
+        </div>}
+      </>}
+    </section>
+    <section className="panel">
+      <h2>Channel memory</h2><p>Preferences are stored per channel and reused in generated content.</p>
+      <form onSubmit={saveTone} className="stack-form">
+        <label>Writing tone<input maxLength={500} value={tone} onChange={e=>setTone(e.target.value)} placeholder="Friendly Hinglish"/></label>
+        <button className="button ghost" disabled={busy || !tone.trim() || !channelId}>Save preference</button>
+      </form>
+      <div className="tip">Keep secrets and credentials out of channel memory.</div>
+      <p>Active model: {aiStatus?.gemini_configured ? aiStatus.model : 'Offline only'}</p>
+    </section>
   </div>;
 }
 
