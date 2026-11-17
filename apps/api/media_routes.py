@@ -1,5 +1,6 @@
 """Loopback-only local media intelligence API, scoped to workspace/channel."""
 from fastapi import APIRouter, HTTPException, Path
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app import media_intelligence as media
@@ -74,3 +75,24 @@ def render_candidate(body: Render, workspace_id: int = Path(ge=1),
                      channel_id: int = Path(ge=1), candidate_id: int = Path(ge=1)):
     # Explicit API action only; never triggered by a scene scan itself.
     return checked(media.render_candidate, workspace_id, channel_id, candidate_id, body.job_id)
+
+
+@router.get("/assets/{asset_id}/preview")
+def preview_asset(workspace_id: int = Path(ge=1), channel_id: int = Path(ge=1),
+                  asset_id: int = Path(ge=1)):
+    """Serve only the registered original for this channel; Starlette handles byte ranges."""
+    record = checked(media.asset, workspace_id, channel_id, asset_id)
+    try:
+        source = media._validated_source(record)
+    except (FileNotFoundError, OSError, ValueError) as exc:
+        raise HTTPException(409, detail="Imported media has changed or is missing; import again") from exc
+    # Browser playback is not guaranteed for other video containers/codecs.
+    if source.suffix.lower() not in (".mp4", ".webm"):
+        raise HTTPException(415, detail="Browser preview supports MP4 or WebM containers only")
+    mime = "video/mp4" if source.suffix.lower() == ".mp4" else "video/webm"
+    return FileResponse(
+        source, media_type=mime,
+        headers={"Cache-Control": "private, no-store",
+                 "X-Content-Type-Options": "nosniff",
+                 "Accept-Ranges": "bytes"},
+    )
