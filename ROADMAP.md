@@ -16,3 +16,11 @@ Until V0.6, no real publishing occurs.
 - Offline content-pack templates; optional Gemini model, channel memory, caching, local cloud request caps.
 - FastAPI endpoints and standalone Python CLI, reviewed job handoff, network-free unit tests.
 - Future V0.5: video editor, captions, voice, visual asset pipeline and true multi-niche production.
+
+## V0.4.1 — stabilization
+
+- Atomic local cloud quota; deduplicated simultaneous calls, explicit Gemini model allowlist.
+- Format-aware, channel-memory-aware offline content, structured Gemini response schema.
+- AI Director UI, canonical job content read endpoint, CORS PUT and safer state transitions.
+- Manual approved FFmpeg rendering into platform job output registry.
+- Legacy SQLite migration and tracked npm lockfile are deferred until tested on source data / a trusted registry connection.
