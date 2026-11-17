@@ -197,6 +197,9 @@ def rank_asset(workspace_id, channel_id, asset_id, profile="balanced", max_secon
         raise ValueError("Scan footage before ranking its clips")
     # Ensure the original file was not replaced after import or during analysis.
     source = media._validated_source(record)
+    # SHA-256 is checked once; subsequent metadata checks catch normal local
+    # edits/replacements while FFmpeg is decoding without rehashing a 20GiB file.
+    initial = source.stat()
     levels = []
     analyzed = bool(record["audio_codec"])
     if analyzed:
@@ -205,7 +208,14 @@ def rank_asset(workspace_id, channel_id, asset_id, profile="balanced", max_secon
         # A silent or steady music bed has no meaningful transient signal.
         # Fall back to visual weights instead of unfairly suppressing scores.
         analyzed = bool(levels) and (max(levels) - statistics.median(levels) > 0.005)
-    media._validated_source(record)
+    try:
+        current = source.stat()
+    except OSError as exc:
+        raise ValueError("Source changed or disappeared during audio analysis") from exc
+    def signature(stat):
+        return (stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_ino)
+    if signature(current) != signature(initial):
+        raise ValueError("Source changed during audio analysis; import again")
 
     results = [_candidate_score(candidate, levels, profile, analyzed) for candidate in candidates]
     results.sort(key=lambda row: (-row["score"], row["start_seconds"], row["candidate_id"]))
