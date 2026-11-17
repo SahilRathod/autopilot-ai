@@ -1,0 +1,68 @@
+"""API regression tests for local media candidates and tenant boundary."""
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+from fastapi.testclient import TestClient
+
+from app import editor, media_intelligence as media, platform_core as core
+from apps.api.main import app
+
+
+class MediaAPITests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        folder = Path(self.tmp.name)
+        self.raw = folder / "raw"
+        self.raw.mkdir()
+        (self.raw / "raw.mp4").write_bytes(b"realistic test placeholder")
+        self.p_db = patch.object(core, "DB", folder / "db.sqlite")
+        self.p_raw = patch.object(editor, "RAW", self.raw)
+        self.p_db.start()
+        self.p_raw.start()
+        self.client = TestClient(app)
+        self.client.__enter__()
+        self.w = core.new_workspace("A")
+        self.c = core.new_channel(self.w, "Gaming", "gaming")
+        self.other = core.new_workspace("Other")
+        self.other_c = core.new_channel(self.other, "Tech", "technology")
+        self.meta = {"duration_seconds": 44.0, "width": 1280, "height": 720,
+                     "fps": 30.0, "video_codec": "h264", "audio_codec": None}
+
+    def tearDown(self):
+        self.client.__exit__(None, None, None)
+        self.p_raw.stop()
+        self.p_db.stop()
+        self.tmp.cleanup()
+
+    def test_api_import_scan_list_and_tenant_isolation(self):
+        base = f"/api/v1/workspaces/{self.w}/channels/{self.c}/media"
+        other = f"/api/v1/workspaces/{self.other}/channels/{self.other_c}/media"
+        with patch.object(media, "probe_metadata", return_value=self.meta):
+            response = self.client.post(base + "/import", json={"filename": "raw.mp4"})
+        self.assertEqual(response.status_code, 201)
+        asset = response.json()
+        self.assertEqual(asset["filename"], "raw.mp4")
+        self.assertEqual(len(self.client.get(base + "/assets").json()), 1)
+        self.assertEqual(self.client.get(other + "/assets").json(), [])
+        self.assertEqual(self.client.get(other + f"/assets/{asset['id']}").status_code, 404)
+        with patch.object(media, "detect_changes", return_value=[7.0, 20.0]):
+            scan = self.client.post(base + f"/assets/{asset['id']}/scan",
+                                    json={"clip_seconds": 10, "threshold": 0.35,
+                                          "max_scan_seconds": 44})
+        self.assertEqual(scan.status_code, 200)
+        candidates = self.client.get(base + f"/assets/{asset['id']}/candidates").json()
+        self.assertEqual(len(candidates), scan.json()["candidate_count"])
+        self.assertGreaterEqual(len(candidates), 2)
+        self.assertEqual(self.client.get(other + f"/assets/{asset['id']}/candidates").status_code, 404)
+
+    def test_api_rejects_bad_input(self):
+        base = f"/api/v1/workspaces/{self.w}/channels/{self.c}/media"
+        self.assertEqual(self.client.post(base + "/import",
+                         json={"filename": "../passwords.mp4"}).status_code, 422)
+        self.assertEqual(self.client.post(base + "/import",
+                         json={"filename": "raw.mp4", "unsupported": True}).status_code, 422)
+
+
+if __name__ == "__main__":
+    unittest.main()
