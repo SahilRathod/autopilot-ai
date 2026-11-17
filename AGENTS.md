@@ -1,6 +1,6 @@
 # Autopilot AI agent guidance
 
-This repository is a local-first Python/FastAPI + Next.js TypeScript project. Read `README.md` and `V041_GUIDE.md` before changing product behavior. Current V0.4.1 drafts content but does **not** upload to YouTube. Never imply that local jobs represent uploads. Keep the unauthenticated API bound to 127.0.0.1.
+This repository is a local-first Python/FastAPI + Next.js TypeScript project. Read `README.md` and `V041_GUIDE.md` before changing product behavior. Current V0.5 milestone 1 analyzes media and drafts content but does **not** upload to YouTube. Never imply that local jobs represent uploads. Keep the unauthenticated API bound to 127.0.0.1.
 
 ## Installed coding skills
 
@@ -24,3 +24,11 @@ Do not disable TLS verification to work around npm errors or add unapproved paid
 - Keep cloud generation explicit and quota-limited. No API key in logs or code, and no paid fallback.
 - Until a tracked npm lockfile can be generated through a trusted TLS connection, keep CI checking TypeScript and production builds with npm install; do not claim reproducible web installs.
 - Before merging a V0.5 feature, include a failing regression test for its intended behavior, verify the full Python suite and Next.js build in CI, and confirm actual source footage use is authorized.
+
+## V0.5 media intelligence boundaries
+
+- The scene-scan module intentionally detects **visual transitions**, not real kills, victories or high-engagement scenes; never mislabel them as semantic highlights.
+- All media sources must be existing files directly under `media/raw/`; no arbitrary paths, URL imports, third-party downloads or secret scanning.
+- Protect approved-job state and workspace/channel scoping before rendering.
+- Bounded scans run only on explicit local CLI/API invocation; do not automatically scan every uploaded video.
+- Validate imported media against its original SHA-256 fingerprint before scanning/rendering. Do not change original files.

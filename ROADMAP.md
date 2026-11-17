@@ -24,3 +24,9 @@ Until V0.6, no real publishing occurs.
 - AI Director UI, canonical job content read endpoint, CORS PUT and safer state transitions.
 - Manual approved FFmpeg rendering into platform job output registry.
 - Legacy SQLite migration and tracked npm lockfile are deferred until tested on source data / a trusted registry connection.
+
+## V0.5 milestone 1 — media intelligence
+
+- Implemented: local FFprobe metadata, SHA-256 source checking, per-channel media assets, bounded FFmpeg visual scene transitions, suggested clip windows, approved-job render handoff, Python CLI and FastAPI routes.
+- Next milestones: candidate preview in dashboard, real gameplay-event heuristics, captions, audio handling, validated media manifests and media-production scheduling.
+- No live uploads or automatic publishing.

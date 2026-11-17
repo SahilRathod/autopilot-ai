@@ -1,6 +1,13 @@
-# Autopilot AI — AI Director V0.4.1
+# Autopilot AI — Media Intelligence V0.5 (first milestone)
 
-Local-first, multi-channel AI drafting and production management. Still not a YouTube video generator or uploader.
+Local-first, multi-channel AI drafting and **V0.5 media analysis** foundation. Still not an autonomous video generator or YouTube uploader.
+
+## V0.5 media intelligence (milestone 1)
+- Import original footage by local filename under `media/raw/`, with FFprobe metadata and SHA-256 source verification.
+- Discover possible clip cut points from bounded, downsampled FFmpeg scene-change analysis. These are **visual transition candidates, not scored highlights**.
+- Store per-channel media assets and clip candidates in the existing platform SQLite database.
+- Inspect candidates through `app.platform_cli` or local FastAPI `/docs`. Render selected clips **only for approved jobs**.
+- See [V0.5 usage guide](V05_GUIDE.md). No npm is required for the Python CLI.
 
 ## V0.4.1 improvements
 - Fixed cost cap=0, concurrent atomic reservations, and duplicate in-flight Gemini requests.
