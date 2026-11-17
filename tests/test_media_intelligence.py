@@ -75,6 +75,16 @@ class MediaIntelligenceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             media.scan_media(self.w, self.c, imported["id"])
 
+    def test_rescan_never_reuses_old_candidate_id(self):
+        imported = self._import()
+        with patch.object(media, "detect_changes", return_value=[8]):
+            media.scan_media(self.w, self.c, imported["id"], clip_seconds=10)
+        old = [x["id"] for x in media.candidates(self.w, self.c, imported["id"])]
+        with patch.object(media, "detect_changes", return_value=[18]):
+            media.scan_media(self.w, self.c, imported["id"], clip_seconds=10)
+        new = [x["id"] for x in media.candidates(self.w, self.c, imported["id"])]
+        self.assertTrue(set(old).isdisjoint(new), "Stale candidate IDs must never identify new suggestions")
+
     def test_empty_scan_still_offers_manual_opening_segment(self):
         imported = self._import()
         with patch.object(media, "detect_changes", return_value=[]):
