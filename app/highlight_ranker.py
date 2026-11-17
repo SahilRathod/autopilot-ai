@@ -202,7 +202,9 @@ def rank_asset(workspace_id, channel_id, asset_id, profile="balanced", max_secon
     if analyzed:
         duration = min(float(record["duration_seconds"]), limit)
         levels = decode_audio_levels(source, duration)
-        analyzed = bool(levels)
+        # A silent or steady music bed has no meaningful transient signal.
+        # Fall back to visual weights instead of unfairly suppressing scores.
+        analyzed = bool(levels) and (max(levels) - statistics.median(levels) > 0.005)
     media._validated_source(record)
 
     results = [_candidate_score(candidate, levels, profile, analyzed) for candidate in candidates]
