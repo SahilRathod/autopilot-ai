@@ -86,7 +86,7 @@ def offline(ch, topic, fmt, notes):
     guidelines = f"Channel preferences: {preferences}" if preferences else "Channel preferences: default"
     if fmt == "short":
         outline = ["0–3s: Hook", "3–20s: Original proof", "20–45s: One actionable tip", "45–60s: CTA"]
-        script = ("[SHORT · 30–60s · NOT VERIFIED]\n"
+        script = ("[SHORT DRAFT TEMPLATE · 30–60s · NOT VERIFIED]\n"
                   f"Language: {lang} | Niche: {niche}\n{guidelines}\n"
                   f"Hook: {topic}\n"
                   "Scene: [REQUIRED: original vertical footage / verified facts]\n"
@@ -96,7 +96,7 @@ def offline(ch, topic, fmt, notes):
     else:
         outline = ["0–20s: Hook and promise", "Context and background", "Three detailed demonstrations",
                    "Practical recap", "Call to action"]
-        script = ("[LONG · 5–12min OUTLINE · NOT VERIFIED]\n"
+        script = ("[LONG DRAFT TEMPLATE · 5–12min OUTLINE · NOT VERIFIED]\n"
                   f"Language: {lang} | Niche: {niche}\n{guidelines}\n"
                   f"Intro: Introduce {topic} and the viewer's goal.\n"
                   "Chapter 1: [REQUIRED: verified context]\n"
