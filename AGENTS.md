@@ -39,3 +39,10 @@ Do not disable TLS verification to work around npm errors or add unapproved paid
 - Range streaming stays loopback-only without SaaS authentication. Validate original media freshness before serving and avoid rehashing on every seek.
 - Only MP4/WebM browser previews are advertised; codec support varies. Never claim that scene transitions identify important game events.
 - Keep the selected clip duration bounded and require an existing approved production job to create a rendered output.
+
+## V0.5 milestone 3 scoring boundaries
+
+- Presets are `balanced`, `tactical`, and `sandbox`. They adjust audio/scene weights and **do not** detect games, kills or victories.
+- Audio analysis is offline, bounded to 600 seconds at 8kHz mono and uses only FFmpeg plus the Python standard library. Do not add Python `audioop` (removed in Python 3.13) or cloud dependencies.
+- Scores are heuristic relative rankings, not probability of audience retention or guaranteed highlights. Music can produce spurious peaks; do not claim semantic detection.
+- Candidate scores are channel-scoped and cascade away on rescan; never reuse old scores when the source or candidate list changes. Do not modify production approval or render constraints.

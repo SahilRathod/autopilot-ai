@@ -36,3 +36,9 @@ Until V0.6, no real publishing occurs.
 - Integrated Media Studio tab with channel library, native browser playback, visual scene markers, bounded candidate playback, and explicit approved-job rendering.
 - Added scoped no-store HTTP range streaming for registered MP4/WebM originals; file integrity cached by size and high-resolution timestamps.
 - Next: richer timeline editing, frame thumbnails, caption support, audio/music processing with rights checks, and true gameplay-event analysis.
+
+## V0.5 milestone 3 — offline clip ranking
+
+- Built: low-rate local audio energy sampling, relative transient strengths, preset-weighted visual/audio heuristics, explainable ranking and persistence, dashboard ordering and API/CLI access.
+- Known limits: no OCR game HUD, kill feed detection, multi-game event models or audio-source separation. Music and narration may trigger high energy; always review.
+- Next: semantic gameplay event analysis with opt-in local lightweight models and training data, subject to device performance and verified consent/rights; V0.5 milestone 4 can focus on captions and export assembly.

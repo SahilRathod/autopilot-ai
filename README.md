@@ -1,6 +1,13 @@
-# Autopilot AI — V0.5 Media Preview Studio
+# Autopilot AI — V0.5 Smarter Clip Suggestions
 
 Local-first, multi-channel AI drafting and **V0.5 media analysis** foundation. Still not an autonomous video generator or YouTube uploader.
+
+## V0.5 milestone 3 — Offline ranking and explainable audio heuristics
+- Decode at most 600 seconds of existing audio using FFmpeg (mono 8kHz PCM), calculate 0.5-second RMS windows, and identify **relative energy spikes**. No internet or new Python dependencies.
+- Rank existing, scanned clip candidates by a user-selected **balanced**, **tactical action** (e.g. Valorant/CS) or **sandbox exploration** (e.g. Minecraft) preset.
+- Persist profile-specific scores and evidence per channel. Rescanning removes stale scores. Silent/no-audio footage falls back to visual cues.
+- Media Studio sorts scored clips and explains each recommendation; scores **are not probabilities** or game-event detections.
+- Available through FastAPI, the Next.js UI and the no-npm Python CLI. See [V0.5 milestone 3 guide](V05_M3_GUIDE.md).
 
 ## V0.5 milestone 2 — Video Preview Studio
 - New **Media Studio** dashboard tab: channel-scoped media library, HTML video preview, visual scene markers and candidate clips.
