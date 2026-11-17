@@ -162,6 +162,8 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
         method: 'POST', body: JSON.stringify({profile, max_seconds: 120}),
       });
       setRanked(results);
+      const best = candidates.find(c => c.id === results[0]?.candidate_id);
+      if (best) seek(best);
       setNotice('Ranked ' + results.length + ' clips using local audio/visual heuristics. Scores are not gameplay-event predictions.');
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
