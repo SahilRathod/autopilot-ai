@@ -56,6 +56,31 @@ class MediaAPITests(unittest.TestCase):
         self.assertGreaterEqual(len(candidates), 2)
         self.assertEqual(self.client.get(other + f"/assets/{asset['id']}/candidates").status_code, 404)
 
+    def test_video_preview_supports_byte_ranges_without_leaking_other_channels(self):
+        base = f"/api/v1/workspaces/{self.w}/channels/{self.c}/media"
+        other = f"/api/v1/workspaces/{self.other}/channels/{self.other_c}/media"
+        with patch.object(media, "probe_metadata", return_value=self.meta):
+            asset = self.client.post(base + "/import", json={"filename": "raw.mp4"}).json()
+        url = base + f"/assets/{asset['id']}/preview"
+        response = self.client.get(url, headers={"Range": "bytes=2-5"})
+        self.assertEqual(response.status_code, 206)
+        self.assertEqual(response.content, b"alis")
+        self.assertEqual(response.headers["content-range"],
+                         f"bytes 2-5/{len((self.raw / 'raw.mp4').read_bytes())}")
+        self.assertEqual(response.headers["content-type"], "video/mp4")
+        self.assertEqual(response.headers["cache-control"], "private, no-store")
+        self.assertEqual(response.headers["x-content-type-options"], "nosniff")
+        self.assertEqual(self.client.get(other + f"/assets/{asset['id']}/preview").status_code, 404)
+
+    def test_video_preview_refuses_source_changed_since_import(self):
+        base = f"/api/v1/workspaces/{self.w}/channels/{self.c}/media"
+        with patch.object(media, "probe_metadata", return_value=self.meta):
+            asset = self.client.post(base + "/import", json={"filename": "raw.mp4"}).json()
+        (self.raw / "raw.mp4").write_bytes(b"modified raw data")
+        response = self.client.get(base + f"/assets/{asset['id']}/preview")
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("changed", response.json()["detail"].lower())
+
     def test_api_rejects_bad_input(self):
         base = f"/api/v1/workspaces/{self.w}/channels/{self.c}/media"
         self.assertEqual(self.client.post(base + "/import",
