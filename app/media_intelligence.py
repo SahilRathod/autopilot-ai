@@ -41,7 +41,7 @@ def initialize():
         CREATE INDEX IF NOT EXISTS idx_media_assets_scope
             ON media_assets(workspace_id, channel_id, id DESC);
         CREATE TABLE IF NOT EXISTS media_candidates (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             asset_id INTEGER NOT NULL REFERENCES media_assets(id) ON DELETE CASCADE,
             workspace_id INTEGER NOT NULL REFERENCES workspaces(id),
             channel_id INTEGER NOT NULL REFERENCES channels(id),
