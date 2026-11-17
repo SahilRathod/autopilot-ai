@@ -32,7 +32,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PATCH"],
+    allow_methods=["GET", "POST", "PATCH", "PUT"],
     allow_headers=["Content-Type"],
 )
 
@@ -184,6 +184,28 @@ def overview(workspace_id: int = Path(ge=1)):
         "ai_enabled": True, "gemini_configured": ai_director.gemini_enabled(),
         "publishing_enabled": False,
     }
+
+
+@app.get("/api/v1/workspaces/{workspace_id}/jobs/{job_id}/content")
+def job_content(workspace_id: int = Path(ge=1), job_id: int = Path(ge=1)):
+    """Read the canonical AI draft for this workspace's production job."""
+    with core.connect() as db:
+        job = db.execute(
+            "SELECT id, channel_id, title, format, state FROM production_jobs "
+            "WHERE id=? AND workspace_id=?", (job_id, workspace_id)).fetchone()
+        if job is None:
+            raise HTTPException(404, "Job not found in this workspace")
+        draft = db.execute(
+            "SELECT id, topic, provider, result_json FROM ai_drafts "
+            "WHERE workspace_id=? AND channel_id=? AND job_id=? LIMIT 1",
+            (workspace_id, job["channel_id"], job_id)).fetchone()
+        if draft is None:
+            raise HTTPException(404, "This job has no AI content pack")
+        import json
+        return {"job_id": job_id, "channel_id": job["channel_id"],
+                "state": job["state"], "draft_id": draft["id"],
+                "topic": draft["topic"], "provider": draft["provider"],
+                "result": json.loads(draft["result_json"])}
 
 
 from apps.api.ai_routes import router as ai_router
