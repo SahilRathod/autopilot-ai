@@ -124,6 +124,16 @@ class RankingTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 ranker.decode_audio_levels(self.raw / "game.mp4", 12)
 
+    def test_silent_or_flat_audio_falls_back_to_visual_weights(self):
+        asset, clips = self.create_candidates(audio=True)
+        for constant in (0.0, 0.25):
+            with self.subTest(constant=constant), patch.object(
+                    ranker, "decode_audio_levels", return_value=[constant] * 90):
+                rows = ranker.rank_asset(self.w, self.c, asset["id"], profile="tactical")
+            self.assertTrue(all(not row["audio_analyzed"] for row in rows))
+            self.assertEqual(rows[0]["candidate_id"], clips[1]["id"])
+            self.assertEqual(rows[0]["score"], 65)
+
     def test_ranking_source_mutation_is_rejected(self):
         asset, _ = self.create_candidates()
         (self.raw / "game.mp4").write_bytes(b"changed after media scan")
