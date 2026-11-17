@@ -9,6 +9,7 @@ import math
 import re
 import shutil
 import subprocess
+from functools import lru_cache
 from fractions import Fraction
 
 from app import editor, media_pipeline, platform_core as core
@@ -188,6 +189,29 @@ def _validated_source(record):
         raise ValueError("Imported source has changed; import it again")
     return source
 
+
+
+@lru_cache(maxsize=32)
+def _cached_preview_hash(path, size, mtime_ns, ctime_ns):
+    """Cache successful checksums for stable local sources across range requests.
+
+    File size, nanosecond modification and change timestamps are used only as a
+    change detector. This is not a security boundary against a malicious local
+    process deliberately altering file metadata while the server runs.
+    """
+    return _fingerprint(path)
+
+
+def preview_source(record):
+    """Verify an imported original before serving browser preview ranges."""
+    source = _source(record["filename"])
+    stat = source.stat()
+    size, digest = _cached_preview_hash(
+        source, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+    )
+    if size != record["file_bytes"] or digest != record["sha256"]:
+        raise ValueError("Imported source has changed; import it again")
+    return source
 
 def detect_changes(source, scan_seconds, threshold):
     """Find approximate visual scene boundaries, not noteworthy game events."""
