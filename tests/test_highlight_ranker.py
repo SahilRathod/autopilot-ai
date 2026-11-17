@@ -134,6 +134,24 @@ class RankingTests(unittest.TestCase):
             self.assertEqual(rows[0]["candidate_id"], clips[1]["id"])
             self.assertEqual(rows[0]["score"], 65)
 
+    def test_ranking_checks_large_source_checksum_only_once(self):
+        asset, _ = self.create_candidates()
+        original = media._validated_source
+        with patch.object(media, "_validated_source", wraps=original) as verified, \
+             patch.object(ranker, "decode_audio_levels", return_value=[0.02] * 90):
+            ranker.rank_asset(self.w, self.c, asset["id"])
+        self.assertEqual(verified.call_count, 1)
+
+    def test_ranking_detects_source_changed_during_audio_decoding(self):
+        asset, _ = self.create_candidates()
+        def alter_source(source, seconds):
+            (self.raw / "game.mp4").write_bytes(b"now changed during analysis")
+            return [0.01] * 90
+        with patch.object(ranker, "decode_audio_levels", side_effect=alter_source):
+            with self.assertRaises(ValueError):
+                ranker.rank_asset(self.w, self.c, asset["id"])
+        self.assertEqual(ranker.rankings(self.w, self.c, asset["id"]), [])
+
     def test_ranking_source_mutation_is_rejected(self):
         asset, _ = self.create_candidates()
         (self.raw / "game.mp4").write_bytes(b"changed after media scan")
