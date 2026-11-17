@@ -32,6 +32,8 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [playerError, setPlayerError] = useState('');
   const player = useRef<HTMLVideoElement>(null);
   const base = channelId === null ? '' : '/workspaces/' + workspaceId + '/channels/' + channelId + '/media';
   const selectedAsset = assets.find(a => a.id === assetId);
@@ -45,7 +47,7 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
   useEffect(() => {
     let active = true;
     setAssets([]); setAssetId(null); setCandidates([]); setSelectedId(null);
-    setJobId(null); setNotice(''); setError('');
+    setJobId(null); setNotice(''); setError(''); setPlayerError(''); setPreviewing(false);
     if (base) api<Asset[]>(base + '/assets').then(items => {
       if (active) { setAssets(items); setAssetId(items[0]?.id ?? null); }
     }).catch(e => { if (active) setError(String(e)); });
@@ -54,7 +56,7 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
 
   useEffect(() => {
     let active = true;
-    setCandidates([]); setSelectedId(null);
+    setCandidates([]); setSelectedId(null); setPreviewing(false); setPlayerError('');
     if (base && assetId !== null) {
       api<Candidate[]>(base + '/assets/' + assetId + '/candidates').then(items => {
         if (active) { setCandidates(items); setSelectedId(items[0]?.id ?? null); }
@@ -68,10 +70,28 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
   }, [jobId, approvedJobs]);
 
   function seek(c: Candidate) {
-    setSelectedId(c.id);
+    setSelectedId(c.id); setPreviewing(false);
     if (player.current) {
       player.current.pause();
       player.current.currentTime = c.start_seconds;
+    }
+  }
+
+  async function playSelected() {
+    if (!selected || !player.current) return;
+    const current = player.current;
+    current.pause();
+    current.currentTime = selected.start_seconds;
+    setPlayerError(''); setPreviewing(true);
+    try { await current.play(); }
+    catch { setPreviewing(false); setPlayerError('Browser could not play this source. Try a compatible H.264 MP4 or WebM.'); }
+  }
+
+  function onTimeUpdate() {
+    if (previewing && selected && player.current &&
+        player.current.currentTime >= selected.start_seconds + selected.duration_seconds) {
+      player.current.pause();
+      setPreviewing(false);
     }
   }
 
@@ -162,10 +182,13 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
             </div>
             <video key={workspaceId + '-' + channelId + '-' + assetId}
               ref={player} className="media-video" controls preload="metadata" playsInline
+              onTimeUpdate={onTimeUpdate}
+              onError={() => setPlayerError("Unable to play this media in your browser. The local file may be unavailable or use an unsupported codec.")}
               src={'/api/v1' + base + '/assets/' + assetId + '/preview'}
               aria-label={'Preview original video: ' + selectedAsset.filename}>
               Your browser cannot play this video.
             </video>
+            {playerError && <p className="media-muted" role="alert">{playerError}</p>}
             <p className="media-muted">
               Codec: {selectedAsset.video_codec} · {selectedAsset.audio_codec || 'no audio'}.
               Browser preview requires a supported MP4/WebM codec.
@@ -223,6 +246,9 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
           <p>{clock(selected.start_seconds)} to {clock(selected.start_seconds + selected.duration_seconds)}.
           Watch the section above before rendering.</p>
         </div>
+        <button className="button outline" type="button" onClick={playSelected}>
+          {previewing ? 'Restart selected clip' : 'Play selected clip'}
+        </button>
         <div className="media-render-form">
           <label>Approved production job
             <select aria-label="Approved production job" value={jobId ?? ''}
