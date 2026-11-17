@@ -142,7 +142,7 @@ export default function Studio() {
             {section === 'ai' && workspaceId !== null && <AIDirector workspaceId={workspaceId} channels={channels} onSubmitted={() => reloadCurrent(workspaceId).catch(e => setError(String(e)))}/>}
             {section === 'channels' && <div className="two-col main-sidebar"><section className="panel"><div className="panel-heading"><div><h2>Your channels</h2><p>Each channel has separate content and budgets</p></div><span className="chip">{channels.length} total</span></div><div className="channel-grid">{channels.length ? channels.map(c => <div className="channel-card" key={c.id}><div className="channel-avatar">{c.name[0].toUpperCase()}</div><div><h3>{c.name}</h3><p>{c.niche} · {c.language}</p><small>₹{c.budget_inr}/month · Publishing disabled</small></div></div>) : <div className="empty-small">No channels yet. Add your first one →</div>}</div></section><section className="panel"><h2>Add a channel</h2><p>Start with gaming, then add any content niche.</p><form className="stack-form" onSubmit={addChannel}><label>Channel name<input required maxLength={100} placeholder="e.g. Gaming Universe" value={channelName} onChange={e=>setChannelName(e.target.value)}/></label><label>Content niche<input required maxLength={80} value={channelNiche} onChange={e=>setChannelNiche(e.target.value)}/></label><label>Language<input required maxLength={40} value={channelLanguage} onChange={e=>setChannelLanguage(e.target.value)}/></label><button className="button primary" disabled={busy}>+ Add channel</button></form></section></div>}
             {section === 'production' && <div className="two-col main-sidebar"><section className="panel"><div className="panel-heading"><div><h2>Production jobs</h2><p>Draft → review → approve → local queue</p></div><select aria-label="Filter by channel" value={filterChannel} onChange={e=>setFilterChannel(e.target.value)}><option value="all">All channels</option>{channels.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></div><JobList jobs={filteredJobs} channelName={nameOfChannel} onTransition={transition} disabled={busy}/></section><section className="panel"><h2>New production job</h2><p>Creates a local draft, not a rendered video.</p><form className="stack-form" onSubmit={addJob}><label>Channel<select required value={jobChannelId} onChange={e=>setJobChannelId(e.target.value)}>{channels.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></label><label>Video title<input required maxLength={200} placeholder="e.g. Valorant Beginner Tips" value={jobTitle} onChange={e=>setJobTitle(e.target.value)}/></label><label>Video format<select value={jobFormat} onChange={e=>setJobFormat(e.target.value as 'short'|'long')}><option value="short">Short / vertical</option><option value="long">Long-form</option></select></label><button className="button primary" disabled={busy || !channels.length}>+ Create draft</button></form><div className="tip">Video editing is currently available through the legacy FFmpeg CLI. Linking rendered files to this queue comes in a future upgrade.</div></section></div>}
-            {section === 'reviews' && <section className="panel"><div className="panel-heading"><div><h2>Pending decisions</h2><p>Review work before it can enter the local queue</p></div><span className="chip">{reviewJobs.length} items</span></div><JobList jobs={reviewJobs} channelName={nameOfChannel} disabled={busy} onTransition={transition}/><div className="tip">“Approve” changes local workflow status only. No upload, publication or API spending occurs.</div></section>}
+            {section === 'reviews' && <section className="panel"><div className="panel-heading"><div><h2>Pending decisions</h2><p>Review work before it can enter the local queue</p></div><span className="chip">{reviewJobs.length} items</span></div><JobList jobs={reviewJobs} channelName={nameOfChannel} disabled={busy} onTransition={transition}/>{workspaceId !== null && <JobContentInspector workspaceId={workspaceId} jobs={reviewJobs}/>}<div className="tip">“Approve” changes local workflow status only. No upload, publication or API spending occurs.</div></section>}
             {section === 'activity' && <section className="panel"><div className="panel-heading"><div><h2>Audit trail</h2><p>Recorded actions in this workspace</p></div><span className="chip">Recent {activity.length}</span></div>{activity.length ? <div className="audit-list">{activity.map(item=><div key={item.id} className="audit-row"><span className="audit-icon">◷</span><div><strong>{displayState(item.action)}</strong><small>{item.channel_id ? `Channel #${item.channel_id}` : 'Workspace'}{item.job_id ? ` · Job #${item.job_id}` : ''}</small></div><time>{item.created_at}</time></div>)}</div> : <div className="empty-small">No activity yet.</div>}</section>}
           </>}
         </>}
@@ -284,6 +284,41 @@ function AIDirector({workspaceId, channels, onSubmitted}: {
       <div className="tip">Keep secrets and credentials out of channel memory.</div>
       <p>Active model: {aiStatus?.gemini_configured ? aiStatus.model : 'Offline only'}</p>
     </section>
+  </div>;
+}
+
+function JobContentInspector({workspaceId,jobs}:{workspaceId:number;jobs:ProductionJob[]}) {
+  const [jobId,setJobId] = useState('');
+  const [content,setContent] = useState<ContentPack|null>(null);
+  const [error,setError] = useState('');
+  const [busy,setBusy] = useState(false);
+  useEffect(()=>{setContent(null);setError('');setJobId('');},[workspaceId]);
+  async function inspect() {
+    if (!jobId) return;
+    setBusy(true);setError('');setContent(null);
+    try {
+      const detail=await api<{result:ContentPack}>('/workspaces/'+workspaceId+'/jobs/'+jobId+'/content');
+      setContent(detail.result);
+    } catch(e) {setError(e instanceof Error ? e.message : String(e));}
+    finally {setBusy(false);}
+  }
+  return <div className="panel" style={{marginTop:16}}>
+    <h3>Inspect AI source content</h3>
+    <p>Read the script and evidence checklist before approving the production job.</p>
+    <div className="inline-form">
+      <select aria-label="AI job to inspect" value={jobId} onChange={e=>{setJobId(e.target.value);setContent(null);setError('');}}>
+        <option value="">Select a job</option>
+        {jobs.map(job=><option key={job.id} value={job.id}>#{job.id} · {job.title}</option>)}
+      </select>
+      <button className="button ghost" disabled={!jobId||busy} onClick={inspect}>View source content</button>
+    </div>
+    {error && <div role="alert" className="notice danger">{error}</div>}
+    {content && <div>
+      <h3>{content.title}</h3>
+      <pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit'}}>{content.script}</pre>
+      <h3>Evidence to verify</h3>
+      <ul>{content.research_needed.map((item,i)=><li key={i}>{item}</li>)}</ul>
+    </div>}
   </div>;
 }
 
