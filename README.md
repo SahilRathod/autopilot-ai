@@ -1,6 +1,14 @@
-# Autopilot AI — V0.5 Smarter Clip Suggestions
+# Autopilot AI — V0.5 Captions and Local Video Assembly
 
-Local-first, multi-channel AI drafting and **V0.5 media analysis** foundation. Still not an autonomous video generator or YouTube uploader.
+Local-first multi-channel AI drafting, media analysis, and **approved local MP4 draft assembly**. Still not an automatic speech transcription service or YouTube uploader.
+
+## V0.5 milestone 4 — Captions and local draft assembly
+- Select up to eight scene candidates in a deliberate playback order and assemble them into one MP4 for an approved production job.
+- Export fast or high-quality Short (portrait) / long-form (landscape) formats, with source audio preserved, single-pass normalization, or mute.
+- Use creator-written caption lines as evenly timed **caption cards**. Embed switchable MP4 subtitles or burn captions into the picture with an FFmpeg libass build. This **does not** transcribe speech or align captions to voice automatically.
+- Preview finished local MP4 exports via the Media Studio UI or use the Python-only CLI, no npm needed.
+- Approval, workspace/channel checks, atomic output publication and non-overlapping legacy/assembly job claims.
+- [V0.5 Milestone 4 usage and limitations](V05_M4_GUIDE.md). No automatic uploads or paid APIs.
 
 ## V0.5 milestone 3 — Offline ranking and explainable audio heuristics
 - Decode at most 600 seconds of existing audio using FFmpeg (mono 8kHz PCM), calculate 0.5-second RMS windows, and identify **relative energy spikes**. No internet or new Python dependencies.

@@ -42,3 +42,10 @@ Until V0.6, no real publishing occurs.
 - Built: low-rate local audio energy sampling, relative transient strengths, preset-weighted visual/audio heuristics, explainable ranking and persistence, dashboard ordering and API/CLI access.
 - Known limits: no OCR game HUD, kill feed detection, multi-game event models or audio-source separation. Music and narration may trigger high energy; always review.
 - Next: semantic gameplay event analysis with opt-in local lightweight models and training data, subject to device performance and verified consent/rights; V0.5 milestone 4 can focus on captions and export assembly.
+
+## V0.5 milestone 4 — captions and export assembly
+
+- Implemented: ordered multi-candidate MP4 assembly; creator-authored text-to-SRT caption cards, soft or burned subtitle export; source/padded audio, loudness normalization or mute; fast and high-quality 9:16/16:9 presets; previewable local exports.
+- Per-job SQLite records and mutually exclusive legacy/assembled render claims; original source SHA-256 and channel boundaries remain enforced.
+- Limitations: captions are **not** speech transcription, generated timing is approximate; no voice synthesis, music license sourcing, YouTube upload, or persistent background renderer.
+- Next: local STT as an explicit opt-in optional dependency, verified subtitle timing, durable render queue and preview thumbnails before any SaaS/public deployment.
