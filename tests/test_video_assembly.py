@@ -1,11 +1,13 @@
 """V0.5 Milestone 4: test local multi-clip assembly and truthful subtitle generation."""
 import subprocess
+import shutil
+import json
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from app import editor, media_intelligence as media, platform_core as core
+from app import editor, media_intelligence as media, platform_core as core, media_pipeline
 from app import video_assembly as assembly
 
 
@@ -139,6 +141,55 @@ class AssemblyTests(unittest.TestCase):
         self.assertIn("00:00:03,000 --> 00:00:06,000", subtitles)
         self.assertIn("First line", subtitles)
         self.assertNotIn("autotranscribed", subtitles.lower())
+
+    def test_job_cannot_mix_single_clip_render_and_multi_clip_export(self):
+        self.approve()
+        # A job already claimed by the old single-clip renderer cannot be assembled.
+        media_pipeline.initialize()
+        with core.connect() as db:
+            db.execute("""INSERT INTO job_renders
+                (job_id,workspace_id,channel_id,state,source_name)
+                VALUES(?,?,?,'ready','game.mp4')""",
+                (self.job,self.w,self.channel))
+        with self.assertRaises(ValueError):
+            assembly.export_job(self.w,self.channel,self.job,[self.candidates[0]["id"]])
+        with core.connect() as db:
+            db.execute("DELETE FROM job_renders WHERE job_id=?", (self.job,))
+        def fake_render(segments, target, preset, quality, audio_mode, caption_mode, caption_lines):
+            Path(target).write_bytes(b"finished MP4")
+            return str(target)
+        with patch.object(assembly,"render_assembled_video", side_effect=fake_render):
+            assembly.export_job(self.w,self.channel,self.job,[self.candidates[0]["id"]])
+        with patch.object(editor,"highlight") as old_renderer:
+            with self.assertRaises(ValueError):
+                media_pipeline.render_job(self.w,self.job,"game.mp4",0,3)
+            old_renderer.assert_not_called()
+
+    @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"),
+                         "Real FFmpeg/FFprobe unavailable on this runner")
+    def test_real_ffmpeg_assembles_short_synthetic_clips_with_soft_captions(self):
+        first = self.raw / "first.mp4"
+        second = self.raw / "second.mp4"
+        subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+                        "-f", "lavfi", "-i", "color=c=blue:s=160x90:r=12:d=1",
+                        "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+                        "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                        "-c:a", "aac", str(first)],check=True,timeout=60)
+        subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+                        "-f", "lavfi", "-i", "color=c=red:s=160x90:r=12:d=1",
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an",
+                        str(second)],check=True,timeout=60)
+        destination=self.out/"video.mp4"
+        assembly.render_assembled_video(
+            [{"source":first,"start":0,"seconds":0.8,"has_audio":True},
+             {"source":second,"start":0,"seconds":0.8,"has_audio":False}],
+             destination,"long","fast","normalize","soft",["First moment","Second moment"])
+        probe=subprocess.run(
+            ["ffprobe","-v","error","-show_entries","stream=codec_type",
+             "-of","json",str(destination)],
+            capture_output=True,text=True,check=True,timeout=30)
+        streams={s["codec_type"] for s in json.loads(probe.stdout)["streams"]}
+        self.assertEqual(streams,{"video","audio","subtitle"})
 
     def test_encoder_uses_staging_concat_and_audio_modes(self):
         fake_source = self.raw / "game.mp4"
