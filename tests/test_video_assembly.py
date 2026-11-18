@@ -160,8 +160,8 @@ class AssemblyTests(unittest.TestCase):
         self.assertEqual(output, str(target))
         self.assertTrue(target.exists())
         self.assertEqual(len(seen), 4)  # 2 segments + concat + subtitle mux
-        self.assertTrue(any("loudnorm=I=-16:TP=-1.5:LRA=11" in cmd for cmd, _ in seen))
-        self.assertTrue(any("anullsrc" in cmd for cmd, _ in seen))
+        self.assertTrue(any(any("loudnorm=I=-16:TP=-1.5:LRA=11" in token for token in cmd) for cmd, _ in seen))
+        self.assertTrue(any(any("anullsrc" in token for token in cmd) for cmd, _ in seen))
         self.assertTrue(any("mov_text" in cmd for cmd, _ in seen))
         self.assertEqual([p.name for p in self.out.iterdir()], ["final.mp4"])
 
