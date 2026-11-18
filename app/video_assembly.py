@@ -185,6 +185,16 @@ def export_job(workspace_id, channel_id, job_id, candidate_ids, quality="fast",
     target = editor.OUT / f"assembly_job_{job_id}_{uuid.uuid4().hex[:12]}.mp4"
     # The unique job_id claim blocks concurrent and duplicate exports.
     with core.connect() as db:
+        # Never claim an assembled export concurrently with a single-clip render.
+        db.execute("BEGIN IMMEDIATE")
+        approved_now = db.execute(
+            "SELECT 1 FROM production_jobs WHERE id=? AND workspace_id=? AND channel_id=? AND state='approved'",
+            (job_id,workspace_id,channel_id)
+        ).fetchone()
+        if not approved_now:
+            raise ValueError("Production job is no longer approved")
+        if db.execute("SELECT 1 FROM job_renders WHERE job_id=?", (job_id,)).fetchone():
+            raise ValueError("This production job already has a legacy render")
         try:
             db.execute("""
                 INSERT INTO assembly_exports(job_id,workspace_id,channel_id,state,
