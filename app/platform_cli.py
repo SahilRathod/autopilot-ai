@@ -1,7 +1,7 @@
 """Independent CLI for the multi-channel foundation."""
 import argparse
 import json
-from . import platform_core as core, media_pipeline, media_intelligence, highlight_ranker
+from . import platform_core as core, media_pipeline, media_intelligence, highlight_ranker, video_assembly
 
 def main():
     p=argparse.ArgumentParser(description='Autopilot AI local multi-channel base')
@@ -48,6 +48,18 @@ def main():
     ranked.add_argument('--channel',type=int,required=True)
     ranked.add_argument('--asset',type=int,required=True)
     ranked.add_argument('--profile',choices=('balanced','tactical','sandbox'),default='balanced')
+    assembly=s.add_parser('media-assemble')
+    assembly.add_argument('--workspace',type=int,required=True)
+    assembly.add_argument('--channel',type=int,required=True)
+    assembly.add_argument('--job',type=int,required=True)
+    assembly.add_argument('--candidates',type=int,nargs='+',required=True)
+    assembly.add_argument('--quality',choices=('fast','high'),default='fast')
+    assembly.add_argument('--audio',choices=('preserve','normalize','mute'),default='preserve')
+    assembly.add_argument('--captions',choices=('none','soft','burn'),default='none')
+    assembly.add_argument('--caption-file',help='UTF-8 text file; one user-authored caption per line')
+    exports=s.add_parser('media-exports')
+    exports.add_argument('--workspace',type=int,required=True)
+    exports.add_argument('--channel',type=int,required=True)
     chosen=s.add_parser('media-render')
     chosen.add_argument('--workspace',type=int,required=True)
     chosen.add_argument('--channel',type=int,required=True)
@@ -78,6 +90,17 @@ def main():
         elif args.action=='media-rankings':
             result=highlight_ranker.rankings(args.workspace,args.channel,args.asset,
                                              args.profile)
+        elif args.action=='media-assemble':
+            from pathlib import Path
+            caption_lines=[]
+            if args.caption_file:
+                pth=Path(args.caption_file)
+                if pth.stat().st_size > 10000: raise ValueError('Caption text file too large')
+                caption_lines=[line.strip() for line in pth.read_text(encoding='utf-8-sig').splitlines() if line.strip()]
+            result=video_assembly.export_job(args.workspace,args.channel,args.job,args.candidates,
+                                             args.quality,args.audio,args.captions,caption_lines)
+        elif args.action=='media-exports':
+            result=video_assembly.exports(args.workspace,args.channel)
         elif args.action=='media-render':
             result=media_intelligence.render_candidate(args.workspace,args.channel,
                                                        args.candidate,args.job)

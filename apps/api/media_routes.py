@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from app import media_intelligence as media, highlight_ranker as ranker
+from app import media_intelligence as media, highlight_ranker as ranker, video_assembly as assembly
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/channels/{channel_id}/media",
                    tags=["V0.5 Media Intelligence"])
@@ -29,6 +29,15 @@ class Scan(Strict):
 class RankingRequest(Strict):
     profile: Literal["balanced", "tactical", "sandbox"] = "balanced"
     max_seconds: float = Field(default=120, gt=0, le=600, allow_inf_nan=False)
+
+class AssemblyCreate(Strict):
+    job_id: int = Field(ge=1)
+    candidate_ids: list[int] = Field(min_length=1, max_length=8)
+    quality: Literal["fast", "high"] = "fast"
+    audio_mode: Literal["preserve", "normalize", "mute"] = "preserve"
+    caption_mode: Literal["none", "soft", "burn"] = "none"
+    caption_lines: list[str] = Field(default_factory=list, max_length=40)
+
 
 class Render(Strict):
     job_id: int = Field(ge=1)
@@ -118,3 +127,31 @@ def get_rankings(workspace_id: int = Path(ge=1), channel_id: int = Path(ge=1),
                  asset_id: int = Path(ge=1),
                  profile: Literal["balanced", "tactical", "sandbox"] = Query(default="balanced")):
     return checked(ranker.rankings, workspace_id, channel_id, asset_id, profile)
+
+
+
+@router.post("/assemble", status_code=201)
+def assemble_export(body: AssemblyCreate, workspace_id: int = Path(ge=1),
+                    channel_id: int = Path(ge=1)):
+    """Explicit local render request for an approved job; never uploads externally."""
+    return checked(assembly.export_job, workspace_id, channel_id,
+                   body.job_id, body.candidate_ids, body.quality,
+                   body.audio_mode, body.caption_mode, body.caption_lines)
+
+
+@router.get("/exports")
+def assembled_exports(workspace_id: int = Path(ge=1), channel_id: int = Path(ge=1)):
+    return checked(assembly.exports, workspace_id, channel_id)
+
+
+@router.get("/exports/{job_id}/preview")
+def preview_assembled_export(workspace_id: int = Path(ge=1),
+                             channel_id: int = Path(ge=1),
+                             job_id: int = Path(ge=1)):
+    """Range-enabled local preview, limited to finished, channel-scoped MP4s."""
+    source = checked(assembly.export_file, workspace_id, channel_id, job_id)
+    return FileResponse(
+        source, media_type="video/mp4",
+        headers={"Cache-Control": "private, no-store",
+                 "X-Content-Type-Options": "nosniff", "Accept-Ranges": "bytes"},
+    )

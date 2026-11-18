@@ -26,12 +26,22 @@ def render_job(workspace_id, job_id, source_name, start=0.0, seconds=30.0):
         raise ValueError("Invalid media clipping time")
     editor.source(source_name)
     with core.connect() as db:
+        # Serialize competing legacy and assembled-render claims across processes.
+        db.execute("BEGIN IMMEDIATE")
         job = db.execute("SELECT * FROM production_jobs WHERE id=? AND workspace_id=?",
                          (job_id, workspace_id)).fetchone()
         if job is None:
             raise ValueError("Job not found in this workspace")
         if job["state"] != "approved":
             raise ValueError("Job must be approved before media rendering")
+        table_exists = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='assembly_exports'"
+        ).fetchone()
+        if table_exists and db.execute(
+            "SELECT 1 FROM assembly_exports WHERE job_id=? AND workspace_id=?",
+            (job_id,workspace_id)
+        ).fetchone():
+            raise ValueError("This job already has an assembled export or active assembly")
         try:
             db.execute("""INSERT INTO job_renders(job_id,workspace_id,channel_id,state,source_name)
                        VALUES(?,?,?,'rendering',?)""",

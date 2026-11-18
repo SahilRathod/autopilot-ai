@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, type Channel, type ProductionJob } from '../lib/api';
+import AssemblyStudio from './AssemblyStudio';
 
 type Asset = {
   id: number; filename: string; duration_seconds: number; width: number;
@@ -333,5 +334,11 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
         </p>}
       </div>}
     </section>}
+    {selectedAsset && channelId !== null && candidates.length > 0 &&
+      <AssemblyStudio
+        key={String(workspaceId) + '-' + String(channelId) + '-' +
+          String(assetId) + '-' + candidates.map(c => c.id).join('_')}
+        workspaceId={workspaceId} channelId={channelId}
+        candidates={sortedCandidates} jobs={approvedJobs}/>}
   </div>;
 }

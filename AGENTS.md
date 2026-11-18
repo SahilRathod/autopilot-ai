@@ -1,6 +1,6 @@
 # Autopilot AI agent guidance
 
-This repository is a local-first Python/FastAPI + Next.js TypeScript project. Read `README.md` and `V041_GUIDE.md` before changing product behavior. Current V0.5 milestone 1 analyzes media and drafts content but does **not** upload to YouTube. Never imply that local jobs represent uploads. Keep the unauthenticated API bound to 127.0.0.1.
+This repository is a local-first Python/FastAPI + Next.js TypeScript project. Read `README.md` and `V05_M4_GUIDE.md` before changing production behavior. V0.5 can create local reviewed draft MP4s but does **not** upload to YouTube. Never imply that local jobs represent uploads. Keep the unauthenticated API bound to 127.0.0.1.
 
 ## Installed coding skills
 
@@ -46,3 +46,12 @@ Do not disable TLS verification to work around npm errors or add unapproved paid
 - Audio analysis is offline, bounded to 600 seconds at 8kHz mono and uses only FFmpeg plus the Python standard library. Do not add Python `audioop` (removed in Python 3.13) or cloud dependencies.
 - Scores are heuristic relative rankings, not probability of audience retention or guaranteed highlights. Music can produce spurious peaks; do not claim semantic detection.
 - Candidate scores are channel-scoped and cascade away on rescan; never reuse old scores when the source or candidate list changes. Do not modify production approval or render constraints.
+
+## V0.5 milestone 4 caption and assembly constraints
+
+- Captions are **user-authored text cards**, not automated speech transcripts. Never claim automatic recognition or word-level sync. Avoid adding paid or large STT models by default.
+- Production assembly accepts 1–8 approved clip candidates scoped to the SAME workspace and channel as the approved job; enforce total duration limits per format.
+- The legacy single-clip renderer and new multi-clip assembler must **never both claim the same production job**. Use BEGIN IMMEDIATE claims to avoid concurrent conflicts.
+- Use temporary directories and os.replace to publish final files only after FFmpeg succeeds; clean temp output on failures. Preserve raw footage.
+- Only render from registered, SHA-256 verified local files. No unapproved download, music library, auto publishing or remote-upload actions.
+- Warn that synchronous multi-clip rendering may exceed browser/proxy timeouts; use the local CLI for long exports until a durable background worker is implemented.
