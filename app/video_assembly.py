@@ -111,6 +111,24 @@ def exports(workspace_id, channel_id):
     } for row in rows]
 
 
+
+def export_file(workspace_id, channel_id, job_id):
+    """Resolve only a finished export belonging to the requested local channel."""
+    media._channel(workspace_id, channel_id)
+    initialize()
+    with core.connect() as db:
+        row = db.execute("""
+            SELECT output_path FROM assembly_exports
+            WHERE workspace_id=? AND channel_id=? AND job_id=? AND state='ready'
+        """, (workspace_id, channel_id, job_id)).fetchone()
+    if row is None or not row["output_path"]:
+        raise ValueError("Export not found in this channel")
+    path = Path(row["output_path"]).resolve()
+    if path.parent != editor.OUT.resolve() or path.suffix.lower() != ".mp4" or not path.is_file():
+        raise ValueError("Export file not found or invalid")
+    return path
+
+
 def export_job(workspace_id, channel_id, job_id, candidate_ids, quality="fast",
                audio_mode="preserve", caption_mode="none", caption_lines=None):
     """An explicitly approved local job assembles 1..8 selected clips in supplied order."""
