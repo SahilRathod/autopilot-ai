@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import platform_core as core, ai_director, media_intelligence, highlight_ranker
+from app import platform_core as core, ai_director, media_intelligence, highlight_ranker, video_assembly
 
 
 @asynccontextmanager
@@ -16,6 +16,7 @@ async def lifespan(_app: FastAPI):
     ai_director.initialize()
     media_intelligence.initialize()
     highlight_ranker.initialize()
+    video_assembly.initialize()
     import httpx
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(20.0, connect=5.0),
