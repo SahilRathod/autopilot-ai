@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import platform_core as core, ai_director, media_intelligence, highlight_ranker, video_assembly, render_queue, youtube_connection, youtube_upload, postproduction
+from app import platform_core as core, ai_director, media_intelligence, highlight_ranker, video_assembly, render_queue, youtube_connection, youtube_upload, postproduction, production_operator
 
 
 @asynccontextmanager
@@ -21,6 +21,7 @@ async def lifespan(_app: FastAPI):
     youtube_connection.initialize()
     youtube_upload.initialize()
     postproduction.initialize()
+    production_operator.initialize()
     import httpx
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(20.0, connect=5.0),
@@ -224,3 +225,7 @@ app.include_router(media_router)
 
 from apps.api.youtube_routes import router as youtube_router
 app.include_router(youtube_router)
+
+
+from apps.api.operator_routes import router as operator_router
+app.include_router(operator_router)

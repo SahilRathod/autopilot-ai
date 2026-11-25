@@ -52,3 +52,18 @@ def drafts(workspace_id: int = Path(ge=1), channel_id: int = Path(ge=1), limit: 
 @router.post("/drafts/{draft_id}/submit")
 def submit(workspace_id: int = Path(ge=1), channel_id: int = Path(ge=1), draft_id: int = Path(ge=1)):
     return {"job_id":safe(ai.submit,workspace_id,channel_id,draft_id),"status":"draft","published":False}
+
+
+class EditDraft(Strict):
+    title: str = Field(min_length=1,max_length=100)
+    hook: str = Field(min_length=1,max_length=1000)
+    script: str = Field(min_length=1,max_length=12000)
+    description: str = Field(min_length=1,max_length=5000)
+
+
+@router.put("/drafts/{draft_id}")
+def edit_draft(body: EditDraft,workspace_id: int = Path(ge=1),channel_id: int = Path(ge=1),draft_id: int = Path(ge=1)):
+    try:
+        return ai.edit_draft(workspace_id,channel_id,draft_id,body.title,body.hook,body.script,body.description)
+    except ValueError as exc:
+        raise HTTPException(404 if "not found" in str(exc) else 409,str(exc)) from exc

@@ -93,3 +93,33 @@ class OperatorTests(unittest.TestCase):
             op.schedule(self.other,self.other_c,"Other topic","short",None,self.asset,8,120,"balanced")
         with self.assertRaises(ValueError):
             self.schedule(due="2026-12-01T12:00:00")
+
+
+    def test_edit_review_draft_and_freeze_after_approval(self):
+        self.schedule()
+        result=op.run_once()
+        draft=ai.drafts(self.w,self.c)[0]
+        edited=ai.edit_draft(self.w,self.c,draft["id"],"Reviewed title","Hook","Actual script","Actual description")
+        self.assertEqual(edited["result"]["script"],"Actual script")
+        self.assertEqual(core.jobs(self.w)[0]["title"],"Reviewed title")
+        core.transition(self.w,result["job_id"],"approved")
+        with self.assertRaises(ValueError):
+            ai.edit_draft(self.w,self.c,draft["id"],"Changed","Hook","Script","Description")
+        with self.assertRaises(ValueError):
+            ai.edit_draft(self.other,self.other_c,draft["id"],"Changed","Hook","Script","Description")
+
+    def test_http_planner_and_edit_are_scoped(self):
+        from fastapi.testclient import TestClient
+        from apps.api.main import app
+        base=f"/api/v1/workspaces/{self.w}/channels/{self.c}/operator"
+        with TestClient(app) as client:
+            response=client.post(base+"/tasks",json={"topic":"A real review","format":"short"})
+            self.assertEqual(response.status_code,201,response.text)
+            result=op.run_once()
+            self.assertEqual(client.get(base+"/tasks").json()[0]["state"],"review")
+            self.assertEqual(client.get(f"/api/v1/workspaces/{self.other}/channels/{self.other_c}/operator/tasks").json(),[])
+            draft=ai.drafts(self.w,self.c)[0]
+            edited=client.put(f"/api/v1/workspaces/{self.w}/channels/{self.c}/ai/drafts/{draft['id']}",
+                json={"title":"Reviewed","hook":"Hook","script":"Script","description":"Description"})
+            self.assertEqual(edited.status_code,200,edited.text)
+            self.assertEqual(client.post(base+f"/tasks/{result['id']}/render",json={}).status_code,409)
