@@ -14,7 +14,7 @@ class RenderQueueTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        root = Path(self.temp.name)
+        root = Path(self.temp.name).resolve()
         raw = root / "raw"
         raw.mkdir()
         (raw / "game.mp4").write_bytes(b"original footage")
@@ -145,12 +145,13 @@ class RenderQueueTests(unittest.TestCase):
 
     def test_sqlite_backup_is_consistent_and_does_not_overwrite(self):
         import sqlite3
+        from contextlib import closing
         from app.maintenance import backup_database
         self.approve()
         self.enqueue()
         destination = core.DB.parent / "backup.sqlite"
         backup_database(core.DB, destination)
-        with sqlite3.connect(destination) as db:
+        with closing(sqlite3.connect(destination)) as db:
             self.assertEqual(db.execute("PRAGMA integrity_check").fetchone()[0], "ok")
             self.assertEqual(db.execute("SELECT state FROM render_tasks").fetchone()[0], "pending")
         with self.assertRaises(FileExistsError):

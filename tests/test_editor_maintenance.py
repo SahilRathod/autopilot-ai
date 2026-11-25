@@ -12,7 +12,7 @@ from app import editor
 class EditorMaintenanceTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.folder = Path(self.temp.name)
+        self.folder = Path(self.temp.name).resolve()
         self.raw = self.folder / "raw"
         self.out = self.folder / "output"
         self.raw.mkdir()
@@ -71,7 +71,7 @@ class EditorMaintenanceTests(unittest.TestCase):
 class APIMetadataTests(unittest.TestCase):
     def test_health_version_matches_release(self):
         from apps.api.main import health
-        self.assertEqual(health()["version"], "0.9.0")
+        self.assertEqual(health()["version"], "1.0.0-rc.1")
 
 
 if __name__ == "__main__":

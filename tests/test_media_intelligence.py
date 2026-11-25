@@ -13,7 +13,7 @@ from app import platform_core as core, editor, media_pipeline, media_intelligenc
 class MediaIntelligenceTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.raw = self.root / "raw"
         self.raw.mkdir()
         (self.raw / "game.mp4").write_bytes(b"unchanged demo source")

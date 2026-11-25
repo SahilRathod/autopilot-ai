@@ -12,7 +12,7 @@ from apps.api.main import app
 class MediaAPITests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        folder = Path(self.tmp.name)
+        folder = Path(self.tmp.name).resolve()
         self.raw = folder / "raw"
         self.raw.mkdir()
         (self.raw / "raw.mp4").write_bytes(b"realistic test placeholder")

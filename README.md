@@ -1,5 +1,7 @@
 # Autopilot AI — V0.5.1 Working Creator Studio
 
+**Current release: V1.0 RC1 (local Windows creator studio).** See [release acceptance](RELEASE_ACCEPTANCE.md) before using real YouTube content. This candidate has implementation and automated checks, not completed live Google/account acceptance.
+
 Local-first multi-channel AI drafting, media analysis, and **approved local MP4 draft assembly**. Still not an automatic speech transcription service or YouTube uploader.
 
 ## V0.5.1 — Local render reliability
@@ -55,7 +57,7 @@ Local-first multi-channel AI drafting, media analysis, and **approved local MP4 
 - Next.js + TypeScript dashboard for workspaces, channel profiles, jobs, review approvals and audit history.
 - FastAPI endpoints with validation, SQLite persistence, workspace scoping and OpenAPI docs.
 - Original Python CLI and FFmpeg gameplay clip editor preserved.
-- Offline zero-cost defaults, optional explicitly enabled Gemini API calls. No YouTube uploads or background jobs.
+- Offline zero-cost defaults, optional explicitly enabled Gemini API calls, local durable workers and separately approved YouTube actions.
 
 ## Windows quick start
 Requirements: Python 3.11+, Node.js >=20.9, Git. FFmpeg/FFprobe required for media import, scene analysis, and rendering.
@@ -64,7 +66,7 @@ Requirements: Python 3.11+, Node.js >=20.9, Git. FFmpeg/FFprobe required for med
 ```powershell
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r apps/api/requirements.txt
-.\.venv\Scripts\python.exe -m uvicorn apps.api.main:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m uvicorn apps.api.main:app --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
 **Terminal 2 (repository root)**
@@ -79,7 +81,12 @@ npm run dev
 .\.venv\Scripts\python.exe -m app.render_queue
 ```
 
-Or use `./start.ps1` for all three services after setup. Open http://127.0.0.1:3000. API docs: http://127.0.0.1:8000/docs.
+**Terminal 4 (repository root)**
+```powershell
+.\.venv\Scripts\python.exe -m app.youtube_upload
+```
+
+Or use `./start.ps1` for all four services after setup. Open http://127.0.0.1:3000. API docs: http://127.0.0.1:8000/docs.
 
 ## Test
 ```powershell
@@ -109,3 +116,9 @@ Media Studio supports accurate SRT timing, lossless video-stream subtitle muxing
 ## V0.7 local content planner
 
 Schedule offline content drafts and optional existing-footage analysis. The shared local worker prepares review jobs and suggests non-overlapping clips. Edit scripts before approval. See [Operator guide](OPERATOR.md).
+
+## V0.8, V0.9 and V1.0 RC1
+
+- Actual on-demand video and channel statistics, optional read-only Analytics API reports, and comment review.
+- Explicit future public scheduling and individual replies with separate management consent. No automatic publication or bulk comments.
+- Release gates: real browser smoke test, Windows media regression suite and upgrade compatibility. See [YouTube setup](YOUTUBE_SETUP.md) and [release acceptance](RELEASE_ACCEPTANCE.md).
