@@ -1,6 +1,12 @@
-# Autopilot AI — V0.5 Captions and Local Video Assembly
+# Autopilot AI — V0.5.1 Working Creator Studio
 
 Local-first multi-channel AI drafting, media analysis, and **approved local MP4 draft assembly**. Still not an automatic speech transcription service or YouTube uploader.
+
+## V0.5.1 — Local render reliability
+- Durable assembly render tasks with a separate local worker and dashboard state polling.
+- Output stream/duration validation with FFprobe for queued assemblies.
+- Windows launcher, database snapshots, dependency diagnostics and configurable dev API port.
+- [Working-product setup and recovery guide](WORKING_RELEASE.md).
 
 ## V0.5 milestone 4 — Captions and local draft assembly
 - Select up to eight scene candidates in a deliberate playback order and assemble them into one MP4 for an approved production job.

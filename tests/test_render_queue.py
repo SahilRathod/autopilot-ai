@@ -139,3 +139,17 @@ class RenderQueueTests(unittest.TestCase):
             self.assertEqual(response.json()["state"], "pending")
             self.assertEqual(client.get(base).json()[0]["job_id"], self.job)
             self.assertEqual(client.get(other).json(), [])
+
+
+    def test_sqlite_backup_is_consistent_and_does_not_overwrite(self):
+        import sqlite3
+        from app.maintenance import backup_database
+        self.approve()
+        self.enqueue()
+        destination = core.DB.parent / "backup.sqlite"
+        backup_database(core.DB, destination)
+        with sqlite3.connect(destination) as db:
+            self.assertEqual(db.execute("PRAGMA integrity_check").fetchone()[0], "ok")
+            self.assertEqual(db.execute("SELECT state FROM render_tasks").fetchone()[0], "pending")
+        with self.assertRaises(FileExistsError):
+            backup_database(core.DB, destination)

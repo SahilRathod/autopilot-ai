@@ -49,3 +49,9 @@ Until V0.6, no real publishing occurs.
 - Per-job SQLite records and mutually exclusive legacy/assembled render claims; original source SHA-256 and channel boundaries remain enforced.
 - Limitations: captions are **not** speech transcription, generated timing is approximate; no voice synthesis, music license sourcing, YouTube upload, or persistent background renderer.
 - Next: local STT as an explicit opt-in optional dependency, verified subtitle timing, durable render queue and preview thumbnails before any SaaS/public deployment.
+
+## V0.5.1 working-product priority
+
+- Keep master usable; test on isolated feature branches/worktrees with separate data.
+- Durable assembly queue, FFprobe validation, Windows launcher, database backup and actual FFmpeg CI are the first stabilization slice.
+- Next: real YouTube OAuth/read-only channel link, private upload with explicit approval, versioned migrations, render recovery and browser tests. Do not claim live integration without verification.
