@@ -3,14 +3,17 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import MediaStudio from './MediaStudio';
 import YouTubeStudio from './YouTubeStudio';
+import PlannerStudio from './PlannerStudio';
+import DraftContentEditor from './DraftContentEditor';
 import { api, type AuditEvent, type Channel, type Overview, type ProductionJob, type Workspace } from '../lib/api';
 
-type Section = 'overview' | 'channels' | 'production' | 'media' | 'youtube' | 'ai' | 'reviews' | 'activity';
+type Section = 'overview' | 'channels' | 'production' | 'media' | 'youtube' | 'planner' | 'ai' | 'reviews' | 'activity';
 const nav: { id: Section; icon: string; label: string }[] = [
   { id: 'overview', icon: '◫', label: 'Overview' },
   { id: 'channels', icon: '▣', label: 'Channels' },
   { id: 'youtube', icon: '▶', label: 'YouTube accounts' },
   { id: 'production', icon: '▤', label: 'Production queue' },
+  { id: 'planner', icon: '◷', label: 'Content planner' },
   { id: 'media', icon: '▶', label: 'Media Studio' },
   { id: 'ai', icon: '✦', label: 'AI Director' },
   { id: 'reviews', icon: '✓', label: 'Approval center' },
@@ -120,7 +123,7 @@ export default function Studio() {
       </select></div>
       <p className="overline nav-label">MANAGE</p>
       <nav className="navigation">{nav.map(n => <button className={'nav-item ' + (section === n.id ? 'active':'')} key={n.id} onClick={() => setSection(n.id)}><span className="nav-icon">{n.icon}</span>{n.label}{n.id === 'reviews' && !!overview?.pending_review && <span className="nav-count">{overview.pending_review}</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><span className="status-dot"/> LOCAL MODE <span className="version">V0.6.1</span><p>Private uploads require explicit approval. Public publishing is disabled.</p></div>
+      <div className="sidebar-bottom"><span className="status-dot"/> LOCAL MODE <span className="version">V0.7</span><p>Private uploads require explicit approval. Public publishing is disabled.</p></div>
     </aside>
     <main className="main-area">
       <header className="topbar"><div className="breadcrumbs">Studio <span>/</span> {nav.find(n => n.id === section)?.label}</div><div className="top-actions"><span className="chip">₹0 API budget</span><span className="chip muted">{overview?.youtube_connected ? "YouTube linked" : "YouTube disconnected"}</span></div></header>
@@ -145,6 +148,7 @@ export default function Studio() {
             </>}
             {section === 'youtube' && workspaceId !== null && <YouTubeStudio key={workspaceId} workspaceId={workspaceId} channels={channels} onChanged={() => reloadCurrent(workspaceId).catch(e => setError(String(e)))}/>}
             {section === 'media' && workspaceId !== null && <MediaStudio key={workspaceId} workspaceId={workspaceId} channels={channels} jobs={jobs} onRendered={() => reloadCurrent(workspaceId).catch(e => setError(String(e)))}/>}
+            {section === 'planner' && workspaceId !== null && <PlannerStudio key={workspaceId} workspaceId={workspaceId} channels={channels} onReview={()=>{setSection('reviews');reloadCurrent(workspaceId).catch(e=>setError(String(e)));}}/>}
             {section === 'ai' && workspaceId !== null && <AIDirector workspaceId={workspaceId} channels={channels} onSubmitted={() => reloadCurrent(workspaceId).catch(e => setError(String(e)))}/>}
             {section === 'channels' && <div className="two-col main-sidebar"><section className="panel"><div className="panel-heading"><div><h2>Your channels</h2><p>Each channel has separate content and budgets</p></div><span className="chip">{channels.length} total</span></div><div className="channel-grid">{channels.length ? channels.map(c => <div className="channel-card" key={c.id}><div className="channel-avatar">{c.name[0].toUpperCase()}</div><div><h3>{c.name}</h3><p>{c.niche} · {c.language}</p><small>₹{c.budget_inr}/month · Publishing disabled</small></div></div>) : <div className="empty-small">No channels yet. Add your first one →</div>}</div></section><section className="panel"><h2>Add a channel</h2><p>Start with gaming, then add any content niche.</p><form className="stack-form" onSubmit={addChannel}><label>Channel name<input required maxLength={100} placeholder="e.g. Gaming Universe" value={channelName} onChange={e=>setChannelName(e.target.value)}/></label><label>Content niche<input required maxLength={80} value={channelNiche} onChange={e=>setChannelNiche(e.target.value)}/></label><label>Language<input required maxLength={40} value={channelLanguage} onChange={e=>setChannelLanguage(e.target.value)}/></label><button className="button primary" disabled={busy}>+ Add channel</button></form></section></div>}
             {section === 'production' && <div className="two-col main-sidebar"><section className="panel"><div className="panel-heading"><div><h2>Production jobs</h2><p>Draft → review → approve → local queue</p></div><select aria-label="Filter by channel" value={filterChannel} onChange={e=>setFilterChannel(e.target.value)}><option value="all">All channels</option>{channels.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></div><JobList jobs={filteredJobs} channelName={nameOfChannel} onTransition={transition} disabled={busy}/></section><section className="panel"><h2>New production job</h2><p>Creates a local draft, not a rendered video.</p><form className="stack-form" onSubmit={addJob}><label>Channel<select required value={jobChannelId} onChange={e=>setJobChannelId(e.target.value)}>{channels.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></label><label>Video title<input required maxLength={200} placeholder="e.g. Valorant Beginner Tips" value={jobTitle} onChange={e=>setJobTitle(e.target.value)}/></label><label>Video format<select value={jobFormat} onChange={e=>setJobFormat(e.target.value as 'short'|'long')}><option value="short">Short / vertical</option><option value="long">Long-form</option></select></label><button className="button primary" disabled={busy || !channels.length}>+ Create draft</button></form><div className="tip">Approved production jobs can render selected scene candidates through Media Studio. Uploads are separate, explicit private actions.</div></section></div>}
@@ -152,7 +156,7 @@ export default function Studio() {
             {section === 'activity' && <section className="panel"><div className="panel-heading"><div><h2>Audit trail</h2><p>Recorded actions in this workspace</p></div><span className="chip">Recent {activity.length}</span></div>{activity.length ? <div className="audit-list">{activity.map(item=><div key={item.id} className="audit-row"><span className="audit-icon">◷</span><div><strong>{displayState(item.action)}</strong><small>{item.channel_id ? `Channel #${item.channel_id}` : 'Workspace'}{item.job_id ? ` · Job #${item.job_id}` : ''}</small></div><time>{item.created_at}</time></div>)}</div> : <div className="empty-small">No activity yet.</div>}</section>}
           </>}
         </>}
-        <footer className="footer"><span>Autopilot AI V0.6.1 · Connected creator studio</span><span>Public publishing and SaaS authentication: not enabled</span></footer>
+        <footer className="footer"><span>Autopilot AI V0.7 · Scheduled creator studio</span><span>Public publishing and SaaS authentication: not enabled</span></footer>
       </div>
     </main>
   </div>;
@@ -275,6 +279,8 @@ function AIDirector({workspaceId, channels, onSubmitted}: {
           <h3>Video description</h3><p>{activeDraft.result.description}</p>
           <h3>Keywords</h3><p>{activeDraft.result.keywords.join(', ')}</p>
           <h3>Research checklist</h3><ul>{activeDraft.result.research_needed.map((item,i)=><li key={i}>{item}</li>)}</ul>
+          <DraftContentEditor key={activeDraft.id} base={base} draftId={activeDraft.id} initial={activeDraft.result}
+            onSaved={()=>refresh(base).then(onSubmitted).catch(e=>setError(String(e)))}/>
           <button className="button primary" disabled={busy || activeDraft.job_id !== null} onClick={()=>submit(activeDraft)}>
             {activeDraft.job_id ? 'Already linked to job #'+activeDraft.job_id : 'Send to production drafts'}
           </button>
