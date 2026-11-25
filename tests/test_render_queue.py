@@ -125,3 +125,17 @@ class RenderQueueTests(unittest.TestCase):
         queue.recover()
         with self.assertRaises(ValueError):
             queue.retry(self.w, self.c, self.job)
+
+
+    def test_http_enqueue_and_scope(self):
+        from fastapi.testclient import TestClient
+        from apps.api.main import app
+        self.approve()
+        with TestClient(app) as client:
+            base = f"/api/v1/workspaces/{self.w}/channels/{self.c}/media/render-tasks"
+            other = f"/api/v1/workspaces/{self.other}/channels/{self.other_c}/media/render-tasks"
+            response = client.post(base, json={"job_id": self.job, "candidate_ids": self.ids})
+            self.assertEqual(response.status_code, 202, response.text)
+            self.assertEqual(response.json()["state"], "pending")
+            self.assertEqual(client.get(base).json()[0]["job_id"], self.job)
+            self.assertEqual(client.get(other).json(), [])

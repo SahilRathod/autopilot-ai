@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from app import media_intelligence as media, highlight_ranker as ranker, video_assembly as assembly
+from app import media_intelligence as media, highlight_ranker as ranker, video_assembly as assembly, render_queue as queue
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/channels/{channel_id}/media",
                    tags=["V0.5 Media Intelligence"])
@@ -155,3 +155,22 @@ def preview_assembled_export(workspace_id: int = Path(ge=1),
         headers={"Cache-Control": "private, no-store",
                  "X-Content-Type-Options": "nosniff", "Accept-Ranges": "bytes"},
     )
+
+
+@router.post("/render-tasks", status_code=202)
+def enqueue_render(body: AssemblyCreate, workspace_id: int = Path(ge=1),
+                   channel_id: int = Path(ge=1)):
+    return checked(queue.enqueue, workspace_id, channel_id, body.job_id,
+                   body.candidate_ids, body.quality, body.audio_mode,
+                   body.caption_mode, body.caption_lines)
+
+
+@router.get("/render-tasks")
+def render_tasks(workspace_id: int = Path(ge=1), channel_id: int = Path(ge=1)):
+    return checked(queue.list_tasks, workspace_id, channel_id)
+
+
+@router.post("/render-tasks/{job_id}/retry", status_code=202)
+def retry_render(job_id: int = Path(ge=1), workspace_id: int = Path(ge=1),
+                 channel_id: int = Path(ge=1)):
+    return checked(queue.retry, workspace_id, channel_id, job_id)

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, type Channel, type ProductionJob } from '../lib/api';
 import AssemblyStudio from './AssemblyStudio';
+import RenderQueuePanel from './RenderQueuePanel';
 
 type Asset = {
   id: number; filename: string; duration_seconds: number; width: number;
@@ -337,8 +338,10 @@ export default function MediaStudio({workspaceId, channels, jobs, onRendered}: {
     {selectedAsset && channelId !== null && candidates.length > 0 &&
       <AssemblyStudio
         key={String(workspaceId) + '-' + String(channelId) + '-' +
-          String(assetId) + '-' + candidates.map(c => c.id).join('_')}
+          String(assetId)}
         workspaceId={workspaceId} channelId={channelId}
         candidates={sortedCandidates} jobs={approvedJobs}/>}
+    {channelId !== null && <RenderQueuePanel key={workspaceId + '-' + channelId}
+      workspaceId={workspaceId} channelId={channelId}/>}
   </div>;
 }
