@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import platform_core as core, ai_director, media_intelligence, highlight_ranker, video_assembly, render_queue
+from app import platform_core as core, ai_director, media_intelligence, highlight_ranker, video_assembly, render_queue, youtube_connection
 
 
 @asynccontextmanager
@@ -18,6 +18,7 @@ async def lifespan(_app: FastAPI):
     highlight_ranker.initialize()
     video_assembly.initialize()
     render_queue.initialize()
+    youtube_connection.initialize()
     import httpx
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(20.0, connect=5.0),
@@ -184,7 +185,7 @@ def overview(workspace_id: int = Path(ge=1)):
         "approved": sum(job["state"] == "approved" for job in all_jobs),
         "queue": sum(job["state"] == "queued" for job in all_jobs),
         "states": {state: sum(job["state"] == state for job in all_jobs) for state in core.STATES},
-        "youtube_connected": False,
+        "youtube_connected": youtube_connection.workspace_connected(workspace_id),
         "ai_enabled": True, "gemini_configured": ai_director.gemini_enabled(),
         "publishing_enabled": False,
     }
@@ -217,3 +218,7 @@ app.include_router(ai_router)
 
 from apps.api.media_routes import router as media_router
 app.include_router(media_router)
+
+
+from apps.api.youtube_routes import router as youtube_router
+app.include_router(youtube_router)

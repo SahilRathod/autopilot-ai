@@ -106,3 +106,34 @@ class YouTubeConnectionTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 yt.disconnect(self.w, self.c)
         self.assertTrue(yt.status(self.w, self.c)["connected"])
+
+
+    def test_http_connection_callback_is_scoped_and_never_returns_credentials(self):
+        from fastapi.testclient import TestClient
+        from apps.api.main import app
+        with TestClient(app, base_url="http://127.0.0.1:8000") as client:
+            path = f"/api/v1/workspaces/{self.w}/channels/{self.c}/youtube"
+            response = client.post(path + "/connect", json={})
+            self.assertEqual(response.status_code, 200, response.text)
+            q = parse_qs(urlsplit(response.json()["authorization_url"]).query)
+            with patch.object(yt, "exchange_code", return_value=self.token()), \
+                 patch.object(yt, "read_channel", return_value=self.channel()):
+                callback = client.get("/api/v1/youtube/callback",
+                                      params={"state": q["state"][0], "code": "code"})
+            self.assertEqual(callback.status_code, 200)
+            self.assertIn("Connection successful", callback.text)
+            self.assertNotIn("access-secret", callback.text)
+            status = client.get(path).json()
+            self.assertTrue(status["connected"])
+            self.assertNotIn("refresh-secret", json.dumps(status))
+            self.assertTrue(client.get(f"/api/v1/workspaces/{self.w}/overview").json()["youtube_connected"])
+            self.assertFalse(client.get(f"/api/v1/workspaces/{self.other}/overview").json()["youtube_connected"])
+            self.assertEqual(client.get(f"/api/v1/workspaces/{self.other}/channels/{self.c}/youtube").status_code, 404)
+
+    def test_expired_state_is_rejected_before_token_exchange(self):
+        q = self.begin()
+        with patch.object(yt.time, "monotonic", return_value=yt.time.monotonic() + 601), \
+             patch.object(yt, "exchange_code") as exchange:
+            with self.assertRaises(ValueError):
+                yt.finish(q["state"][0], "code")
+            exchange.assert_not_called()

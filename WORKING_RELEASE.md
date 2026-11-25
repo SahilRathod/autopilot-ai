@@ -20,7 +20,7 @@ The launcher checks PATH and dependencies, backs up existing databases, builds t
 
 Alternatively run these commands in three terminals:
 
-    .\.venv\Scripts\python.exe -m uvicorn apps.api.main:app --host 127.0.0.1 --port 8000
+    .\.venv\Scripts\python.exe -m uvicorn apps.api.main:app --host 127.0.0.1 --port 8000 --no-access-log
     .\.venv\Scripts\python.exe -m app.render_queue
     cd apps\web
     npm.cmd run dev

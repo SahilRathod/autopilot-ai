@@ -262,3 +262,9 @@ def disconnect(w, c):
             db.execute("DELETE FROM youtube_links WHERE local_channel_id=? AND workspace_id=?", (c,w))
             db.execute("INSERT INTO audit_log(workspace_id,channel_id,action) VALUES(?,?,'youtube_disconnected')",(w,c))
         return status(w,c)
+
+
+def workspace_connected(w):
+    initialize()
+    with core.connect() as db:
+        return db.execute("SELECT 1 FROM youtube_links WHERE workspace_id=? LIMIT 1", (w,)).fetchone() is not None

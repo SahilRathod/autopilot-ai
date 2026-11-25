@@ -2,12 +2,14 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import MediaStudio from './MediaStudio';
+import YouTubeStudio from './YouTubeStudio';
 import { api, type AuditEvent, type Channel, type Overview, type ProductionJob, type Workspace } from '../lib/api';
 
-type Section = 'overview' | 'channels' | 'production' | 'media' | 'ai' | 'reviews' | 'activity';
+type Section = 'overview' | 'channels' | 'production' | 'media' | 'youtube' | 'ai' | 'reviews' | 'activity';
 const nav: { id: Section; icon: string; label: string }[] = [
   { id: 'overview', icon: '◫', label: 'Overview' },
   { id: 'channels', icon: '▣', label: 'Channels' },
+  { id: 'youtube', icon: '▶', label: 'YouTube accounts' },
   { id: 'production', icon: '▤', label: 'Production queue' },
   { id: 'media', icon: '▶', label: 'Media Studio' },
   { id: 'ai', icon: '✦', label: 'AI Director' },
@@ -121,12 +123,12 @@ export default function Studio() {
       <div className="sidebar-bottom"><span className="status-dot"/> LOCAL MODE <span className="version">V0.5.1</span><p>Nothing is published to YouTube. You approve every action.</p></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div className="breadcrumbs">Studio <span>/</span> {nav.find(n => n.id === section)?.label}</div><div className="top-actions"><span className="chip">₹0 API budget</span><span className="chip muted">YouTube disconnected</span></div></header>
+      <header className="topbar"><div className="breadcrumbs">Studio <span>/</span> {nav.find(n => n.id === section)?.label}</div><div className="top-actions"><span className="chip">₹0 API budget</span><span className="chip muted">{overview?.youtube_connected ? "YouTube linked" : "YouTube disconnected"}</span></div></header>
       <div className="content">
         {error && <div className="notice danger" role="alert">{error} <button aria-label="Dismiss error" onClick={() => setError('')}>×</button></div>}
         {status && <div className="notice success" role="status">{status}<button aria-label="Dismiss message" onClick={() => setStatus('')}>×</button></div>}
         {loading ? <div className="panel empty">Connecting to local backend…</div> : <>
-          <div className="page-heading"><div><span className="eyebrow">YOUR CREATOR CONTROL CENTER</span><h1>{section === 'overview' ? `Welcome to ${activeWorkspace?.name ?? 'Autopilot AI'}` : nav.find(n => n.id === section)?.label}</h1><p>{section === 'overview' ? 'Organize channels, draft content and review your production pipeline.' : 'All changes stay on your computer until a later publishing integration is added.'}</p></div><button className="button ghost" disabled={busy || workspaceId === null} onClick={() => workspaceId !== null && reloadCurrent(workspaceId).catch(e=>setError(String(e)))}>↻ Refresh</button></div>
+          <div className="page-heading"><div><span className="eyebrow">YOUR CREATOR CONTROL CENTER</span><h1>{section === 'overview' ? `Welcome to ${activeWorkspace?.name ?? 'Autopilot AI'}` : nav.find(n => n.id === section)?.label}</h1><p>{section === 'overview' ? 'Organize channels, draft content and review your production pipeline.' : 'Local production stays on your computer. YouTube data is fetched only with your permission.'}</p></div><button className="button ghost" disabled={busy || workspaceId === null} onClick={() => workspaceId !== null && reloadCurrent(workspaceId).catch(e=>setError(String(e)))}>↻ Refresh</button></div>
           {workspaces.length === 0 ? <div className="panel onboarding"><div className="onboarding-icon">✦</div><h2>Create your first workspace</h2><p>A workspace holds multiple channels and their independent production jobs.</p><form onSubmit={addWorkspace} className="inline-form"><input required maxLength={100} placeholder="e.g. My Creator Studio" value={workspaceName} onChange={e=>setWorkspaceName(e.target.value)}/><button className="button primary" disabled={busy}>Create workspace</button></form></div> : <>
             {section === 'overview' && <>
               <div className="kpi-grid">
@@ -138,9 +140,10 @@ export default function Studio() {
               <div className="two-col"><section className="panel"><div className="panel-heading"><div><h2>Production pipeline</h2><p>Live status of your locally tracked work</p></div></div>
                 <div className="pipeline">{['draft','ready_for_review','approved','queued','completed'].map(state => <div className="pipeline-step" key={state}><span className={'pipeline-number '+state}>{overview?.states[state] ?? 0}</span><small>{displayState(state)}</small></div>)}</div>
                 <button className="text-link" onClick={() => setSection('production')}>View all production jobs →</button>
-              </section><section className="panel"><div className="panel-heading"><div><h2>Platform readiness</h2><p>Clear status, no simulated analytics</p></div></div><div className="readiness-row"><span className="round-check">✓</span><div><strong>Local workspace engine</strong><small>Ready for channel and job management</small></div></div><div className="readiness-row"><span className="round-check">✓</span><div><strong>AI Director</strong><small>Generate offline or optional Gemini content packs</small></div></div><div className="readiness-row"><span className="round-soon">·</span><div><strong>YouTube publishing</strong><small>Not connected or enabled</small></div></div></section></div>
+              </section><section className="panel"><div className="panel-heading"><div><h2>Platform readiness</h2><p>Clear status, no simulated analytics</p></div></div><div className="readiness-row"><span className="round-check">✓</span><div><strong>Local workspace engine</strong><small>Ready for channel and job management</small></div></div><div className="readiness-row"><span className="round-check">✓</span><div><strong>AI Director</strong><small>Generate offline or optional Gemini content packs</small></div></div><div className="readiness-row"><span className="round-soon">·</span><div><strong>YouTube publishing</strong><small>Uploads disabled; accounts can connect read-only</small></div></div></section></div>
               <section className="panel"><div className="panel-heading"><div><h2>Recent production</h2><p>Latest video jobs from all your channels</p></div><button className="text-link" onClick={() => setSection('production')}>Manage queue →</button></div><JobList jobs={jobs.slice(0,5)} channelName={nameOfChannel} disabled={busy} onTransition={transition}/></section>
             </>}
+            {section === 'youtube' && workspaceId !== null && <YouTubeStudio key={workspaceId} workspaceId={workspaceId} channels={channels} onChanged={() => reloadCurrent(workspaceId).catch(e => setError(String(e)))}/>}
             {section === 'media' && workspaceId !== null && <MediaStudio key={workspaceId} workspaceId={workspaceId} channels={channels} jobs={jobs} onRendered={() => reloadCurrent(workspaceId).catch(e => setError(String(e)))}/>}
             {section === 'ai' && workspaceId !== null && <AIDirector workspaceId={workspaceId} channels={channels} onSubmitted={() => reloadCurrent(workspaceId).catch(e => setError(String(e)))}/>}
             {section === 'channels' && <div className="two-col main-sidebar"><section className="panel"><div className="panel-heading"><div><h2>Your channels</h2><p>Each channel has separate content and budgets</p></div><span className="chip">{channels.length} total</span></div><div className="channel-grid">{channels.length ? channels.map(c => <div className="channel-card" key={c.id}><div className="channel-avatar">{c.name[0].toUpperCase()}</div><div><h3>{c.name}</h3><p>{c.niche} · {c.language}</p><small>₹{c.budget_inr}/month · Publishing disabled</small></div></div>) : <div className="empty-small">No channels yet. Add your first one →</div>}</div></section><section className="panel"><h2>Add a channel</h2><p>Start with gaming, then add any content niche.</p><form className="stack-form" onSubmit={addChannel}><label>Channel name<input required maxLength={100} placeholder="e.g. Gaming Universe" value={channelName} onChange={e=>setChannelName(e.target.value)}/></label><label>Content niche<input required maxLength={80} value={channelNiche} onChange={e=>setChannelNiche(e.target.value)}/></label><label>Language<input required maxLength={40} value={channelLanguage} onChange={e=>setChannelLanguage(e.target.value)}/></label><button className="button primary" disabled={busy}>+ Add channel</button></form></section></div>}
