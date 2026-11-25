@@ -72,3 +72,31 @@ class InsightsTests(unittest.TestCase):
         self.assertEqual(result[0]["text"],"Great video")
         self.assertEqual(result[0]["replies"],3)
         self.assertEqual(fetch.call_args.args[2]["textFormat"],"plainText")
+
+    def test_report_requires_analytics_scope(self):
+        with patch.object(yt,"refresh_access") as refresh:
+            with self.assertRaises(ValueError):
+                insights.report(self.w,self.c)
+            refresh.assert_not_called()
+
+    def test_report_maps_actual_columns_and_missing_values(self):
+        with core.connect() as db:
+            db.execute("UPDATE youtube_links SET analytics_authorized=1")
+        from unittest.mock import Mock
+        response=Mock()
+        response.json.return_value={"columnHeaders":[{"name":"averageViewDuration"},{"name":"views"}],"rows":[[34.5,42]]}
+        with patch.object(yt,"read_channel",return_value={"id":"UC-owner"}), patch.object(yt,"_request",return_value=response) as call:
+            report=insights.report(self.w,self.c)
+        self.assertEqual(report["metrics"]["averageViewDuration"],34.5)
+        self.assertEqual(report["metrics"]["views"],42)
+        self.assertIsNone(report["metrics"]["subscribersLost"])
+        self.assertEqual(call.call_args.kwargs["params"]["ids"],"channel==MINE")
+
+    def test_http_insights_loopback_and_scope(self):
+        from fastapi.testclient import TestClient
+        from apps.api.main import app
+        with TestClient(app,base_url="http://127.0.0.1:8000") as client, patch.object(insights,"snapshot",return_value={"videos":[]}):
+            path=f"/api/v1/workspaces/{self.w}/channels/{self.c}/youtube/insights"
+            self.assertEqual(client.get(path).json(),{"videos":[]})
+        with TestClient(app,base_url="http://external.test") as client:
+            self.assertEqual(client.get(path).status_code,403)
