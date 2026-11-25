@@ -33,7 +33,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Autopilot AI Local API", version="0.6.1", lifespan=lifespan,
+    title="Autopilot AI Local API", version="0.7.0", lifespan=lifespan,
     description="Local-only management API. Local loopback API; explicit private YouTube uploads supported, public publishing disabled.",
 )
 app.add_middleware(
@@ -93,7 +93,7 @@ def channel_or_404(workspace_id: int, channel_id: int):
 
 @app.get("/api/v1/health")
 def health():
-    return {"status": "ok", "version": "0.6.1", "mode": "local", "publishing": False, "private_uploads": True}
+    return {"status": "ok", "version": "0.7.0", "mode": "local", "publishing": False, "private_uploads": True}
 
 
 @app.get("/api/v1/workspaces")

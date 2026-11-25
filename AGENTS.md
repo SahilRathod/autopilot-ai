@@ -67,3 +67,5 @@ Do not store raw OAuth refresh/access tokens or expose them to the browser. Use 
 - Private uploads require separate user-granted upload scope, an approved finished export, explicit per-video confirmation and exact intended channel identity. Never silently retry an expired/ambiguous resumable session as a new upload. Public publishing stays disabled. Do not log credentials or resumable session URLs.
 
 - Finishing operations create immutable revisions and retain original media; never change the active export once an upload record exists. Validate subtitle timestamps and FFprobe output. Optional speech recognition must use explicitly installed local model weights, never download/upload audio silently. Review recognition errors and thumbnail/narration rights.
+
+- Operator prepares offline drafts and bounded existing-media suggestions only. It must not bypass human approval or auto-upload. Freeze content after approval; schedule times are UTC and CPU-heavy planning shares the render worker.
