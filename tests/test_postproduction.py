@@ -102,3 +102,21 @@ class PostProductionTests(unittest.TestCase):
         with patch.object(post,"recognize",return_value=[SimpleNamespace(start=0.2,end=1.4,text="Hello")]):
             target=post.transcribe(self.w,self.c,self.job,"en")
         self.assertIn("00:00:00,200 --> 00:00:01,400",target.read_text(encoding="utf-8"))
+
+
+    def test_http_caption_revision_and_thumbnail_scope(self):
+        from fastapi.testclient import TestClient
+        from apps.api.main import app
+        def fake(source,target,srt):
+            target.write_bytes(b"captioned")
+        base=f"/api/v1/workspaces/{self.w}/channels/{self.c}/media/exports/{self.job}"
+        other=f"/api/v1/workspaces/{self.other}/channels/{self.other_c}/media/exports/{self.job}"
+        with TestClient(app) as client,patch.object(post,"mux_captions",side_effect=fake), \
+             patch.object(assembly,"validate_output"):
+            response=client.post(base+"/captions",json={"srt":self.srt})
+            self.assertEqual(response.status_code,201,response.text)
+            revisions=client.get(base+"/revisions").json()
+            self.assertEqual(len(revisions),2)
+            self.assertEqual(client.post(base+f"/revisions/{revisions[-1]['id']}/activate").status_code,200)
+            self.assertEqual(assembly.export_file(self.w,self.c,self.job),self.original)
+            self.assertEqual(client.get(other+"/revisions").status_code,404)

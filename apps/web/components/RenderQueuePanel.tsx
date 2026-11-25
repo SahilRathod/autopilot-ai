@@ -2,10 +2,11 @@
 
 import {useEffect, useState} from 'react';
 import {api} from '../lib/api';
+import PostProductionPanel from './PostProductionPanel';
 
 type Task = {job_id: number; state: 'pending'|'running'|'ready'|'failed'|'interrupted';
   attempts: number; error: string|null};
-type Export = {job_id: number; quality: string; caption_mode: string};
+type Export = {job_id: number; quality: string; caption_mode: string; output_path:string; total_seconds:number};
 export default function RenderQueuePanel({workspaceId, channelId}: {
   workspaceId: number; channelId: number;
 }) {
@@ -13,6 +14,7 @@ export default function RenderQueuePanel({workspaceId, channelId}: {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [exports, setExports] = useState<Export[]>([]);
   const [preview, setPreview] = useState<number|null>(null);
+  const [revisionTick,setRevisionTick]=useState(0);
   const [error, setError] = useState('');
   const [retrying, setRetrying] = useState<number|null>(null);
 
@@ -66,10 +68,11 @@ export default function RenderQueuePanel({workspaceId, channelId}: {
           </option>)}
         </select>
       </label>
-      {preview !== null && <video key={preview} className="media-video" controls preload="metadata"
+      {preview !== null && <video key={String(preview)+'-'+revisionTick+'-'+(exports.find(e=>e.job_id===preview)?.output_path??'')} className="media-video" controls preload="metadata"
         src={'/api/v1' + base + '/exports/' + preview + '/preview'}
         aria-label={'Preview finished export for job ' + preview}/>}
-      <p className="media-muted">Files are saved in media/output/. No YouTube uploads.</p>
+      {preview!==null&&<PostProductionPanel key={preview} base={base} jobId={preview} duration={exports.find(e=>e.job_id===preview)?.total_seconds??0} onChanged={()=>setRevisionTick(n=>n+1)}/>}
+      <p className="media-muted">Files are saved in media/output/. Uploads require a separate approved action.</p>
     </div>}
   </section>;
 }
