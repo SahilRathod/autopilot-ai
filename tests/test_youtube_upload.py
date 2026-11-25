@@ -140,7 +140,7 @@ class YouTubeUploadTests(unittest.TestCase):
              patch.object(assembly,"validate_output"):
             path=f"/api/v1/workspaces/{self.w}/channels/{self.c}/youtube/uploads"
             data={"job_id":self.job,"title":"Private test","category_id":"20",
-                  "made_for_kids":False,"private_upload_approved":False}
+                  "made_for_kids":False,"private_upload_approved":False,"expected_output":str(self.file)}
             self.assertEqual(client.post(path,json=data).status_code,409)
             data["private_upload_approved"]=True
             self.assertEqual(client.post(path,json=data,headers={"Origin":"https://example.com"}).status_code,403)
@@ -175,3 +175,11 @@ class YouTubeUploadTests(unittest.TestCase):
             self.assertEqual(send.call_args.kwargs["headers"]["Content-Range"],"bytes 4-7/10")
             upload.query_session(self.session,"token",10)
             self.assertEqual(send.call_args.kwargs["headers"]["Content-Range"],"bytes */10")
+
+
+    def test_reviewed_export_version_must_match_current_output(self):
+        self.authorize(True)
+        with patch.object(assembly,"validate_output") as validate:
+            with self.assertRaises(ValueError):
+                upload.enqueue(self.w,self.c,self.job,"Test","","20",False,True,"stale.mp4")
+            validate.assert_not_called()

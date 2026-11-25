@@ -93,8 +93,10 @@ def mux_captions(source,target,srt):
                  "-c:v","copy","-c:a","copy","-c:s","mov_text","-movflags","+faststart",str(target)])
 
 
-def _revision(w,c,job,operation,caption_mode,process):
+def _revision(w,c,job,operation,caption_mode,process,expected_output):
     source,row=_row(w,c,job)
+    if row['output_path']!=expected_output:
+        raise ValueError('Export version changed; reload before editing')
     with core.connect() as db:
         _check_unsubmitted(db,job)
     target=editor.OUT/f"revision_{job}_{uuid.uuid4().hex[:12]}.mp4"
@@ -135,7 +137,7 @@ def attach_captions(w,c,job,srt):
         raise ValueError("Burned-in text cannot be removed; use a clean export")
     normalized=to_srt(parse_srt(srt,row["total_seconds"]))
     return _revision(w,c,job,"timed_captions","soft",
-                     lambda source,target:mux_captions(source,target,normalized))
+                     lambda source,target:mux_captions(source,target,normalized),row['output_path'])
 
 
 def _voice_file(filename):
@@ -161,7 +163,7 @@ def mix_voiceover(w,c,job,filename,game_volume=0.25,voice_volume=1.0):
         _ffmpeg(["-i",str(source),"-i",str(audio),"-filter_complex",filters,
                  "-map","0:v:0","-map","[mix]","-map","0:s?","-c:v","copy","-c:a","aac",
                  "-b:a","192k","-c:s","copy","-movflags","+faststart",str(target)])
-    return _revision(w,c,job,"narration_mix",row["caption_mode"],process)
+    return _revision(w,c,job,"narration_mix",row["caption_mode"],process,row["output_path"])
 
 
 def history(w,c,job):

@@ -120,3 +120,17 @@ class PostProductionTests(unittest.TestCase):
             self.assertEqual(client.post(base+f"/revisions/{revisions[-1]['id']}/activate").status_code,200)
             self.assertEqual(assembly.export_file(self.w,self.c,self.job),self.original)
             self.assertEqual(client.get(other+"/revisions").status_code,404)
+
+
+    def test_concurrent_revision_conflict_does_not_overwrite_active_output(self):
+        changed=editor.OUT/"changed.mp4"
+        changed.write_bytes(b"new active file")
+        def fake(source,target,srt):
+            target.write_bytes(b"uncommitted")
+            with core.connect() as db:
+                db.execute("UPDATE assembly_exports SET output_path=? WHERE job_id=?",(str(changed),self.job))
+        with patch.object(post,"mux_captions",side_effect=fake),patch.object(assembly,"validate_output"):
+            with self.assertRaises(ValueError):
+                post.attach_captions(self.w,self.c,self.job,self.srt)
+        self.assertEqual(assembly.export_file(self.w,self.c,self.job),changed)
+        self.assertFalse(list(editor.OUT.glob("revision_*.mp4")))
