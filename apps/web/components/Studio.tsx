@@ -123,7 +123,7 @@ export default function Studio() {
       </select></div>
       <p className="overline nav-label">MANAGE</p>
       <nav className="navigation">{nav.map(n => <button className={'nav-item ' + (section === n.id ? 'active':'')} key={n.id} onClick={() => setSection(n.id)}><span className="nav-icon">{n.icon}</span>{n.label}{n.id === 'reviews' && !!overview?.pending_review && <span className="nav-count">{overview.pending_review}</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><span className="status-dot"/> LOCAL MODE <span className="version">V0.9</span><p>Private uploads require explicit approval. Automatic publishing is disabled.</p></div>
+      <div className="sidebar-bottom"><span className="status-dot"/> LOCAL MODE <span className="version">V1.0 RC1</span><p>Private uploads require explicit approval. Automatic publishing is disabled.</p></div>
     </aside>
     <main className="main-area">
       <header className="topbar"><div className="breadcrumbs">Studio <span>/</span> {nav.find(n => n.id === section)?.label}</div><div className="top-actions"><span className="chip">₹0 API budget</span><span className="chip muted">{overview?.youtube_connected ? "YouTube linked" : "YouTube disconnected"}</span></div></header>
@@ -156,7 +156,7 @@ export default function Studio() {
             {section === 'activity' && <section className="panel"><div className="panel-heading"><div><h2>Audit trail</h2><p>Recorded actions in this workspace</p></div><span className="chip">Recent {activity.length}</span></div>{activity.length ? <div className="audit-list">{activity.map(item=><div key={item.id} className="audit-row"><span className="audit-icon">◷</span><div><strong>{displayState(item.action)}</strong><small>{item.channel_id ? `Channel #${item.channel_id}` : 'Workspace'}{item.job_id ? ` · Job #${item.job_id}` : ''}</small></div><time>{item.created_at}</time></div>)}</div> : <div className="empty-small">No activity yet.</div>}</section>}
           </>}
         </>}
-        <footer className="footer"><span>Autopilot AI V0.9 · Creator studio with channel insights</span><span>Automatic publishing and SaaS authentication: not enabled</span></footer>
+        <footer className="footer"><span>Autopilot AI V1.0 RC1 · Creator studio with channel insights</span><span>Automatic publishing and SaaS authentication: not enabled</span></footer>
       </div>
     </main>
   </div>;

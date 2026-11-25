@@ -1,4 +1,4 @@
-"""V0.3 local-only API. NOT safe to expose on a public network without authentication."""
+"""Local creator API. NOT safe to expose on a public network without authentication."""
 import sqlite3
 from contextlib import asynccontextmanager
 from typing import Literal
@@ -33,7 +33,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Autopilot AI Local API", version="0.9.0", lifespan=lifespan,
+    title="Autopilot AI Local API", version="1.0.0-rc.1", lifespan=lifespan,
     description="Local-only management API. Local loopback API; explicit private YouTube uploads supported, explicit public schedules with additional management consent; unattended publishing disabled.",
 )
 app.add_middleware(
@@ -93,7 +93,7 @@ def channel_or_404(workspace_id: int, channel_id: int):
 
 @app.get("/api/v1/health")
 def health():
-    return {"status": "ok", "version": "0.9.0", "mode": "local", "publishing": False, "private_uploads": True, "approved_scheduling": True}
+    return {"status": "ok", "version": "1.0.0-rc.1", "mode": "local", "publishing": False, "private_uploads": True, "approved_scheduling": True}
 
 
 @app.get("/api/v1/workspaces")
