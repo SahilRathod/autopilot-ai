@@ -66,3 +66,5 @@ Until V0.6, no real publishing occurs.
 - V0.6.1: timestamped caption files, optional offline transcription CLI, narration audio mixing, local frame thumbnail and safe export revision history. Full editing timeline, generated graphics, hardware benchmarks and actual speech-recognition validation remain open.
 
 - V0.7: durable scheduled offline draft generation, optional clip recommendations, editable review drafts, explicit render handoff and retry/cancel controls. Real-time trend research, semantic game events and public publishing remain separate work.
+
+- V0.8: on-demand live YouTube video statistics, optional 28-day Analytics API report, read-only top-level comments and manual reply drafts. Google account and actual provider report verification remain open; no fake metrics or automatic engagement.
