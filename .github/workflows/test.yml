@@ -25,6 +25,17 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build
+        env:
+          AUTOPILOT_API_PORT: '18000'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r apps/api/requirements.txt playwright==1.65.2
+        working-directory: .
+      - run: python -m playwright install --with-deps chromium
+        working-directory: .
+      - run: python scripts/browser_smoke.py
+        working-directory: .
 
   windows-credential:
     runs-on: windows-latest
@@ -34,5 +45,16 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install -r apps/api/requirements.txt
-      - run: python -m unittest discover -s tests -p "test_youtube*.py" -v
+      - name: Ensure FFmpeg is available
+        shell: pwsh
+        run: |
+          if (!(Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+            choco install ffmpeg --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          ffmpeg -version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ffprobe -version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - run: python -m unittest discover -s tests -v
       - run: python -c "from app.youtube_connection import protect, unprotect; data=protect('test-credential'); assert b'test-credential' not in data; assert unprotect(data)=='test-credential'"
