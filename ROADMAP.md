@@ -68,3 +68,6 @@ Until V0.6, no real publishing occurs.
 - V0.7: durable scheduled offline draft generation, optional clip recommendations, editable review drafts, explicit render handoff and retry/cancel controls. Real-time trend research, semantic game events and public publishing remain separate work.
 
 - V0.8: on-demand live YouTube video statistics, optional 28-day Analytics API report, read-only top-level comments and manual reply drafts. Google account and actual provider report verification remain open; no fake metrics or automatic engagement.
+
+- V0.9: management scope, explicitly approved provider scheduling and individual comment replies, duplicate protection and review-required outcomes.
+- V1.0 RC1: browser integration checks, full Windows FFmpeg testing, existing-record upgrade regression and documented release acceptance. Final V1.0 remains gated on actual Windows and Google account acceptance.

@@ -64,8 +64,12 @@ Keep production master and real channel data separate from development. Do not m
 
 Do not store raw OAuth refresh/access tokens or expose them to the browser. Use fixed Google endpoints, a one-time expiring PKCE state, and a loopback redirect. Never log OAuth callback URLs; launch Uvicorn with --no-access-log. A real account link requires creator consent. Read-only grants do not authorize upload or comment operations.
 
-- Private uploads require separate user-granted upload scope, an approved finished export, explicit per-video confirmation and exact intended channel identity. Never silently retry an expired/ambiguous resumable session as a new upload. Public publishing stays disabled. Do not log credentials or resumable session URLs.
+- Private uploads require separate user-granted upload scope, an approved finished export, explicit per-video confirmation and exact intended channel identity. Never silently retry an expired/ambiguous resumable session as a new upload. Automatic publishing stays disabled; explicit creator-approved future public schedules require separate management authorization. Do not log credentials or resumable session URLs.
 
 - Finishing operations create immutable revisions and retain original media; never change the active export once an upload record exists. Validate subtitle timestamps and FFprobe output. Optional speech recognition must use explicitly installed local model weights, never download/upload audio silently. Review recognition errors and thumbnail/narration rights.
 
 - Operator prepares offline drafts and bounded existing-media suggestions only. It must not bypass human approval or auto-upload. Freeze content after approval; schedule times are UTC and CPU-heavy planning shares the render worker.
+
+## V1.0 acceptance
+
+Keep master usable, verify synthetic media and browser workflow on CI, preserve legacy data, and require the real Windows/account checks in RELEASE_ACCEPTANCE.md before marking final V1.0 complete. Never execute live publishing or reply operations as part of development or CI. Never retry an ambiguous remote mutation automatically.
