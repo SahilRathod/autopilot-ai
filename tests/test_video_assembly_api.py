@@ -13,7 +13,7 @@ from apps.api.main import app
 class AssemblyAPITests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        root = Path(self.tmp.name)
+        root = Path(self.tmp.name).resolve()
         self.raw, self.out = root / "raw", root / "output"
         self.raw.mkdir()
         self.out.mkdir()

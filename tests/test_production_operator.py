@@ -13,7 +13,7 @@ class OperatorTests(unittest.TestCase):
     def setUp(self):
         tmp=tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        root=Path(tmp.name)
+        root=Path(tmp.name).resolve()
         raw=root/"raw";raw.mkdir()
         (raw/"game.mp4").write_bytes(b"source")
         for p in (patch.object(core,"DB",root/"db.sqlite"),patch.object(editor,"RAW",raw)):

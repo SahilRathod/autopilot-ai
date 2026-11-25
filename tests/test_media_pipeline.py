@@ -9,11 +9,11 @@ from app import editor
 class MediaWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.db_override = patch.object(core, "DB", Path(self.temp.name) / "db.sqlite")
+        self.db_override = patch.object(core, "DB", Path(self.temp.name).resolve() / "db.sqlite")
         self.db_override.start()
-        self.raw_override = patch.object(editor, "RAW", Path(self.temp.name) / "raw")
+        self.raw_override = patch.object(editor, "RAW", Path(self.temp.name).resolve() / "raw")
         self.raw_override.start()
-        self.out_override = patch.object(editor, "OUT", Path(self.temp.name) / "out")
+        self.out_override = patch.object(editor, "OUT", Path(self.temp.name).resolve() / "out")
         self.out_override.start()
         editor.RAW.mkdir()
         (editor.RAW / "footage.mp4").write_bytes(b"fake source")

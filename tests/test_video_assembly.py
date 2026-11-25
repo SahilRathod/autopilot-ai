@@ -14,7 +14,7 @@ from app import video_assembly as assembly
 class AssemblyTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        folder = Path(self.tmp.name)
+        folder = Path(self.tmp.name).resolve()
         self.raw = folder / "raw"
         self.out = folder / "out"
         self.raw.mkdir()

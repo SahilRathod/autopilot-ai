@@ -14,7 +14,7 @@ from app import highlight_ranker as ranker
 class RankingTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.raw = self.root / "raw"
         self.raw.mkdir()
         (self.raw / "game.mp4").write_bytes(b"unchanged source")

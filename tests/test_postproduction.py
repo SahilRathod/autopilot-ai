@@ -15,7 +15,7 @@ class PostProductionTests(unittest.TestCase):
     def setUp(self):
         temp=tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
-        root=Path(temp.name)
+        root=Path(temp.name).resolve()
         raw,out=root/"raw",root/"output"
         raw.mkdir();out.mkdir()
         for p in (patch.object(core,"DB",root/"db.sqlite"),patch.object(editor,"RAW",raw),patch.object(editor,"OUT",out)):

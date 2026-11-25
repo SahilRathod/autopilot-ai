@@ -12,7 +12,7 @@ from app import editor
 class EditorMaintenanceTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.folder = Path(self.temp.name)
+        self.folder = Path(self.temp.name).resolve()
         self.raw = self.folder / "raw"
         self.out = self.folder / "output"
         self.raw.mkdir()

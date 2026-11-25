@@ -14,7 +14,7 @@ class RenderQueueTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        root = Path(self.temp.name)
+        root = Path(self.temp.name).resolve()
         raw = root / "raw"
         raw.mkdir()
         (raw / "game.mp4").write_bytes(b"original footage")
