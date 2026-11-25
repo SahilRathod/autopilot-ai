@@ -137,3 +137,13 @@ class YouTubeConnectionTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 yt.finish(q["state"][0], "code")
             exchange.assert_not_called()
+
+
+    def test_forget_local_does_not_call_google_and_removes_credential(self):
+        self.link()
+        with patch.object(yt, "revoke_token") as revoke:
+            result = yt.forget_local(self.w, self.c)
+        revoke.assert_not_called()
+        self.assertFalse(result["connected"])
+        with core.connect() as db:
+            self.assertIsNone(db.execute("SELECT 1 FROM youtube_links").fetchone())

@@ -264,6 +264,19 @@ def disconnect(w, c):
         return status(w,c)
 
 
+def forget_local(w, c):
+    """Remove local credentials after explicit action, even if Google is unreachable."""
+    with _lock:
+        _link(w, c)
+        for state, record in list(_pending.items()):
+            if (record["w"], record["c"]) == (w,c):
+                _pending.pop(state)
+        with core.connect() as db:
+            db.execute("DELETE FROM youtube_links WHERE local_channel_id=? AND workspace_id=?", (c,w))
+            db.execute("INSERT INTO audit_log(workspace_id,channel_id,action) VALUES(?,?,'youtube_forgot_local')",(w,c))
+        return status(w,c)
+
+
 def workspace_connected(w):
     initialize()
     with core.connect() as db:

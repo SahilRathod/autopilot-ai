@@ -50,6 +50,11 @@ def disconnect(request: Request, w: int, c: int, body: ExplicitRequest):
     return checked(request, yt.disconnect, w, c)
 
 
+@router.post("/workspaces/{w}/channels/{c}/youtube/forget")
+def forget(request: Request, w: int, c: int, body: ExplicitRequest):
+    return checked(request, yt.forget_local, w, c)
+
+
 @router.get("/youtube/callback", response_class=HTMLResponse)
 def callback(request: Request, state: str = "", code: str = "", error: str = ""):
     local_request(request)

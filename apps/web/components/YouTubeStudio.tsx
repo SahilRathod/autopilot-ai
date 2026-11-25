@@ -29,7 +29,7 @@ export default function YouTubeStudio({workspaceId, channels, onChanged}: {
     return()=>{active=false;};
   },[base,reload]);
 
-  async function action(kind:'connect'|'refresh'|'disconnect'){
+  async function action(kind:'connect'|'refresh'|'disconnect'|'forget'){
     if(!base||busy)return;
     setBusy(true);setError('');
     try{
@@ -75,8 +75,10 @@ export default function YouTubeStudio({workspaceId, channels, onChanged}: {
           <div><strong>{status.channel.view_count??'Unavailable'}</strong><p>Channel views</p></div>
         </div>
         <button type="button" className="button outline" disabled={busy||!status.configured} onClick={()=>action('refresh')}>Refresh channel statistics</button>
-        <label><input type="checkbox" checked={confirm} disabled={busy} onChange={e=>setConfirm(e.target.checked)}/> Revoke this app's Google authorization (may affect other grants for the same account).</label>
+        <label><input type="checkbox" checked={confirm} disabled={busy} onChange={e=>setConfirm(e.target.checked)}/> I understand revocation may affect other grants for the same account; forgetting locally does not revoke Google access.</label>
         <button type="button" className="button outline" disabled={busy||!confirm} onClick={()=>action('disconnect')}>Disconnect and revoke</button>
+        <button type="button" className="button outline" disabled={busy||!confirm} onClick={()=>action('forget')}>Forget local connection only</button>
+        <p className="media-muted">If revocation fails, forget the local connection and remove access in <a href="https://myaccount.google.com/connections" target="_blank" rel="noreferrer">your Google account</a>.</p>
       </>}
     </>}
   </section>;
