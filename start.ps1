@@ -40,9 +40,11 @@ try {
 $backendCommand = "& '.\.venv\Scripts\python.exe' -m uvicorn apps.api.main:app --host 127.0.0.1 --port $ApiPort --no-access-log"
 $workerCommand = "& '.\.venv\Scripts\python.exe' -m app.render_queue"
 $mode = if ($Dev) {"dev"} else {"start"}
-$webCommand = "npm.cmd run $mode -- --port $WebPort"
+$webCommand = "npm.cmd run $mode -- --port $WebPort --hostname 127.0.0.1"
+$uploadCommand = "& '.\.venv\Scripts\python.exe' -m app.youtube_upload"
 Start-Process powershell.exe -WorkingDirectory $root -ArgumentList @("-NoExit","-Command",$backendCommand)
 Start-Process powershell.exe -WorkingDirectory $root -ArgumentList @("-NoExit","-Command",$workerCommand)
+Start-Process powershell.exe -WorkingDirectory $root -ArgumentList @("-NoExit","-Command",$uploadCommand)
 Start-Process powershell.exe -WorkingDirectory $web -ArgumentList @("-NoExit","-Command",$webCommand)
 Write-Host "Dashboard: http://127.0.0.1:$WebPort"
 Write-Host "API: http://127.0.0.1:$ApiPort/api/v1/health"

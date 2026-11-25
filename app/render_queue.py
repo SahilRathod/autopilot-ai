@@ -28,9 +28,9 @@ def initialize():
 
 
 @contextmanager
-def worker_lock():
+def worker_lock(suffix=".worker.lock"):
     """OS-released lock, including on process termination. Local filesystem only."""
-    path = core.DB.with_suffix(".worker.lock")
+    path = core.DB.with_suffix(suffix)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a+b") as lock:
         lock.seek(0, 2)
@@ -46,7 +46,7 @@ def worker_lock():
                 import fcntl
                 fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
-            raise RuntimeError("Another local render worker is active") from exc
+            raise RuntimeError("Another local worker is active") from exc
         try:
             yield
         finally:

@@ -2,10 +2,11 @@
 
 import {useEffect, useState} from 'react';
 import {api, type Channel} from '../lib/api';
+import PrivateUploadPanel from './PrivateUploadPanel';
 
 type Profile = {id:string; title:string; subscriber_count:string|null; video_count:string|null; view_count:string|null};
 type Status = {configured:boolean; windows_supported:boolean; connected:boolean;
-  permission:string; channel:Profile|null; updated_at:string|null};
+  upload_authorized:boolean; permission:string; channel:Profile|null; updated_at:string|null};
 type Auth = {authorization_url:string; expires_in:number};
 
 export default function YouTubeStudio({workspaceId, channels, onChanged}: {
@@ -29,12 +30,12 @@ export default function YouTubeStudio({workspaceId, channels, onChanged}: {
     return()=>{active=false;};
   },[base,reload]);
 
-  async function action(kind:'connect'|'refresh'|'disconnect'|'forget'){
+  async function action(kind:'connect'|'authorize-upload'|'refresh'|'disconnect'|'forget'){
     if(!base||busy)return;
     setBusy(true);setError('');
     try{
-      if(kind==='connect'){
-        const result=await api<Auth>(base+'/connect',{method:'POST',body:'{}'});
+      if(kind==='connect'||kind==='authorize-upload'){
+        const result=await api<Auth>(base+'/'+kind,{method:'POST',body:'{}'});
         setAuth(result);
       }else{
         const result=await api<Status>(base+'/'+kind,{method:'POST',body:'{}'});
@@ -45,7 +46,7 @@ export default function YouTubeStudio({workspaceId, channels, onChanged}: {
   }
   return <section className="panel stack-form">
     <div className="panel-heading"><div><h2>Connect your YouTube channel</h2>
-      <p>Official Google OAuth authorization. Read-only access; uploads and public publishing are disabled.</p>
+      <p>Official Google OAuth. Read-only by default; private uploads require separate authorization. Public publishing is disabled.</p>
     </div><span className="chip">YouTube Data API</span></div>
     {!channels.length?<p>Create a local channel profile in Channels first.</p>:<>
       <label>Local channel profile<select value={current??''} disabled={busy}
@@ -67,7 +68,7 @@ export default function YouTubeStudio({workspaceId, channels, onChanged}: {
       {status?.connected&&status.channel&&<>
         <div className="channel-card"><div className="channel-avatar">YT</div><div>
           <h3>{status.channel.title}</h3><p>{status.channel.id}</p>
-          <small>Read-only authorization · last updated {status.updated_at??'unknown'} UTC</small>
+          <small>{status.permission} authorization · last updated {status.updated_at??'unknown'} UTC</small>
         </div></div>
         <div className="two-col">
           <div><strong>{status.channel.subscriber_count??'Unavailable'}</strong><p>Subscribers (as reported by YouTube)</p></div>
@@ -75,6 +76,14 @@ export default function YouTubeStudio({workspaceId, channels, onChanged}: {
           <div><strong>{status.channel.view_count??'Unavailable'}</strong><p>Channel views</p></div>
         </div>
         <button type="button" className="button outline" disabled={busy||!status.configured} onClick={()=>action('refresh')}>Refresh channel statistics</button>
+        {!status.upload_authorized&&<>
+          <button type="button" className="button primary" disabled={busy||!status.configured||!status.windows_supported}
+            onClick={()=>action('authorize-upload')}>Authorize private uploads</button>
+          {auth&&<div className="tip"><p>Google will request upload permission. Select the same linked channel.</p>
+            <a href={auth.authorization_url} target="_blank" rel="noreferrer">Continue to Google authorization</a></div>}
+          <button type="button" className="button outline" disabled={busy} onClick={()=>{setReload(n=>n+1);onChanged();}}>Check authorization</button>
+        </>}
+        {status.upload_authorized&&current!==null&&<PrivateUploadPanel key={base} workspaceId={workspaceId} channelId={current} remoteTitle={status.channel.title} remoteId={status.channel.id}/>}
         <label><input type="checkbox" checked={confirm} disabled={busy} onChange={e=>setConfirm(e.target.checked)}/> I understand revocation may affect other grants for the same account; forgetting locally does not revoke Google access.</label>
         <button type="button" className="button outline" disabled={busy||!confirm} onClick={()=>action('disconnect')}>Disconnect and revoke</button>
         <button type="button" className="button outline" disabled={busy||!confirm} onClick={()=>action('forget')}>Forget local connection only</button>

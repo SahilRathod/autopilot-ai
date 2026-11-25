@@ -97,3 +97,7 @@ Read BASE_ARCHITECTURE.md and ROADMAP.md for future plans.
 ## YouTube account connection (V0.6 first slice)
 
 Windows-only, opt-in read-only Google desktop OAuth. See [YouTube setup](YOUTUBE_SETUP.md). Private uploads are not enabled in this slice.
+
+## V0.6 private upload
+
+Separate upload authorization, reviewed MP4 and explicit private-upload approval, resumable local worker, real provider video ID and byte-confirmed progress. See [YouTube setup](YOUTUBE_SETUP.md). No public publishing or automatic uploads.
