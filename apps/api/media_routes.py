@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from app import media_intelligence as media, highlight_ranker as ranker, video_assembly as assembly, render_queue as queue
+from app import media_intelligence as media, highlight_ranker as ranker, video_assembly as assembly, render_queue as queue, postproduction as post
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/channels/{channel_id}/media",
                    tags=["V0.5 Media Intelligence"])
@@ -174,3 +174,48 @@ def render_tasks(workspace_id: int = Path(ge=1), channel_id: int = Path(ge=1)):
 def retry_render(job_id: int = Path(ge=1), workspace_id: int = Path(ge=1),
                  channel_id: int = Path(ge=1)):
     return checked(queue.retry, workspace_id, channel_id, job_id)
+
+
+class TimedCaptionRequest(Strict):
+    srt: str = Field(min_length=1,max_length=131072)
+
+
+class NarrationRequest(Strict):
+    filename: str = Field(min_length=1,max_length=255)
+    game_volume: float = Field(default=0.25,ge=0,le=2,allow_inf_nan=False)
+    voice_volume: float = Field(default=1,gt=0,le=2,allow_inf_nan=False)
+
+
+class ThumbnailRequest(Strict):
+    timestamp: float = Field(ge=0,allow_inf_nan=False)
+
+
+@router.get("/exports/{job_id}/revisions")
+def revisions(workspace_id: int,channel_id: int,job_id: int):
+    return checked(post.history,workspace_id,channel_id,job_id)
+
+
+@router.post("/exports/{job_id}/captions",status_code=201)
+def timed_captions(body: TimedCaptionRequest,workspace_id: int,channel_id: int,job_id: int):
+    return checked(post.attach_captions,workspace_id,channel_id,job_id,body.srt)
+
+
+@router.post("/exports/{job_id}/narration",status_code=201)
+def narration(body: NarrationRequest,workspace_id: int,channel_id: int,job_id: int):
+    return checked(post.mix_voiceover,workspace_id,channel_id,job_id,body.filename,body.game_volume,body.voice_volume)
+
+
+@router.post("/exports/{job_id}/revisions/{revision_id}/activate")
+def activate_revision(workspace_id: int,channel_id: int,job_id: int,revision_id: int):
+    return checked(post.activate_revision,workspace_id,channel_id,job_id,revision_id)
+
+
+@router.post("/exports/{job_id}/thumbnail",status_code=201)
+def create_thumbnail(body: ThumbnailRequest,workspace_id: int,channel_id: int,job_id: int):
+    return checked(post.create_thumbnail,workspace_id,channel_id,job_id,body.timestamp)
+
+
+@router.get("/exports/{job_id}/thumbnail")
+def thumbnail(workspace_id: int,channel_id: int,job_id: int):
+    path=checked(post.thumbnail_file,workspace_id,channel_id,job_id)
+    return FileResponse(path,media_type="image/jpeg",headers={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"})

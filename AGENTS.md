@@ -65,3 +65,5 @@ Keep production master and real channel data separate from development. Do not m
 Do not store raw OAuth refresh/access tokens or expose them to the browser. Use fixed Google endpoints, a one-time expiring PKCE state, and a loopback redirect. Never log OAuth callback URLs; launch Uvicorn with --no-access-log. A real account link requires creator consent. Read-only grants do not authorize upload or comment operations.
 
 - Private uploads require separate user-granted upload scope, an approved finished export, explicit per-video confirmation and exact intended channel identity. Never silently retry an expired/ambiguous resumable session as a new upload. Public publishing stays disabled. Do not log credentials or resumable session URLs.
+
+- Finishing operations create immutable revisions and retain original media; never change the active export once an upload record exists. Validate subtitle timestamps and FFprobe output. Optional speech recognition must use explicitly installed local model weights, never download/upload audio silently. Review recognition errors and thumbnail/narration rights.

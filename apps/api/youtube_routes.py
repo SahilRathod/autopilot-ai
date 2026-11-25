@@ -20,6 +20,7 @@ class PrivateUploadRequest(BaseModel):
     category_id: str = Field(min_length=1,max_length=3)
     made_for_kids: StrictBool
     private_upload_approved: StrictBool
+    expected_output: str = Field(min_length=1,max_length=4096)
 
 
 def local_request(request):
@@ -98,7 +99,7 @@ def list_uploads(request: Request, w: int, c: int):
 @router.post("/workspaces/{w}/channels/{c}/youtube/uploads",status_code=202)
 def queue_upload(request: Request, w: int, c: int, body: PrivateUploadRequest):
     return checked(request, upload.enqueue,w,c,body.job_id,body.title,body.description,
-                   body.category_id,body.made_for_kids,body.private_upload_approved)
+                   body.category_id,body.made_for_kids,body.private_upload_approved,body.expected_output)
 
 
 @router.post("/workspaces/{w}/channels/{c}/youtube/uploads/{job}/retry",status_code=202)

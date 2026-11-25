@@ -7,11 +7,12 @@ import hashlib
 import json
 import re
 import time
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
 
-from app import platform_core as core, video_assembly as assembly, youtube_connection as yt
+from app import platform_core as core, video_assembly as assembly, youtube_connection as yt, editor
 from app.render_queue import worker_lock
 
 UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
@@ -69,17 +70,21 @@ def _fingerprint(path):
 
 
 def _export(w,c,job):
-    path=assembly.export_file(w,c,job)
     with core.connect() as db:
         row=db.execute("""SELECT a.*,j.format,j.state AS job_state FROM assembly_exports a
             JOIN production_jobs j ON j.id=a.job_id WHERE a.job_id=? AND a.workspace_id=?
             AND a.channel_id=? AND a.state='ready'""",(job,w,c)).fetchone()
-    if not row or row["job_state"] not in ("approved","completed"):
+    if not row or not row["output_path"]:
+        raise ValueError("Export not found in this channel")
+    if row["job_state"] not in ("approved","completed"):
         raise ValueError("Only an approved, finished local export can be uploaded")
+    path=Path(row["output_path"]).resolve()
+    if path.parent!=editor.OUT.resolve() or path.suffix.lower()!=".mp4" or not path.is_file():
+        raise ValueError("Export file not found")
     return path,row
 
 
-def enqueue(w,c,job,title,description,category_id,made_for_kids,consent):
+def enqueue(w,c,job,title,description,category_id,made_for_kids,consent,expected_output=None):
     initialize()
     if consent is not True:
         raise ValueError("Explicit private upload approval is required")
@@ -95,6 +100,8 @@ def enqueue(w,c,job,title,description,category_id,made_for_kids,consent):
     if not link or not link["upload_authorized"]:
         raise ValueError("Authorize YouTube uploads for this channel first")
     path,export=_export(w,c,job)
+    if expected_output is not None and expected_output!=export['output_path']:
+        raise ValueError('Export version changed; preview and approve the newest video')
     assembly.validate_output(path,export["format"],export["quality"],export["caption_mode"],export["total_seconds"])
     digest,size,_=_fingerprint(path)
     with core.connect() as db:
@@ -105,6 +112,9 @@ def enqueue(w,c,job,title,description,category_id,made_for_kids,consent):
             raise ValueError("YouTube authorization changed; review and approve again")
         if db.execute("SELECT 1 FROM youtube_uploads WHERE job_id=?",(job,)).fetchone():
             raise ValueError("This job already has an upload record")
+        latest=db.execute("SELECT output_path FROM assembly_exports WHERE job_id=? AND state='ready'",(job,)).fetchone()
+        if not latest or latest["output_path"]!=export["output_path"]:
+            raise ValueError("Export changed during upload approval; review the newest video")
         db.execute("""INSERT INTO youtube_uploads
             (job_id,workspace_id,channel_id,remote_channel_id,state,title,description,category_id,made_for_kids,file_sha256,file_bytes)
             VALUES(?,?,?,?,'pending',?,?,?,?,?,?)""",

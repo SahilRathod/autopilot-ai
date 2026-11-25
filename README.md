@@ -101,3 +101,7 @@ Windows-only, opt-in read-only Google desktop OAuth. See [YouTube setup](YOUTUBE
 ## V0.6 private upload
 
 Separate upload authorization, reviewed MP4 and explicit private-upload approval, resumable local worker, real provider video ID and byte-confirmed progress. See [YouTube setup](YOUTUBE_SETUP.md). No public publishing or automatic uploads.
+
+## V0.6.1 post-production
+
+Media Studio supports accurate SRT timing, lossless video-stream subtitle muxing, imported narration mixing, frame thumbnails and selectable export revisions. Optional offline Whisper transcription requires a separately installed local model. See [Post-production guide](POSTPRODUCTION.md).

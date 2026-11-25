@@ -3,7 +3,7 @@
 import {FormEvent,useEffect,useState} from 'react';
 import {api} from '../lib/api';
 
-type Export = {job_id:number; quality:string; caption_mode:string};
+type Export = {job_id:number; quality:string; caption_mode:string; output_path:string};
 type Task = {job_id:number;title:string;state:string;file_bytes:number;bytes_uploaded:number;video_id:string|null;error:string|null};
 
 export default function PrivateUploadPanel({workspaceId,channelId,remoteTitle,remoteId}:{
@@ -35,14 +35,16 @@ export default function PrivateUploadPanel({workspaceId,channelId,remoteTitle,re
   },[base]);
 
   const eligible=files.filter(f=>!tasks.some(t=>t.job_id===f.job_id));
-  const valid=job!==null&&eligible.some(f=>f.job_id===job);
+  const reviewedOutput=eligible.find(f=>f.job_id===job)?.output_path;
+  const valid=job!==null&&!!reviewedOutput;
+  useEffect(()=>{setConsent(false);},[reviewedOutput]);
   async function submit(e:FormEvent<HTMLFormElement>){
     e.preventDefault();
     if(!valid||!consent||kids===''||busy)return;
     setBusy(true);setError('');
     try{
       const row=await api<Task>(base+'/youtube/uploads',{method:'POST',body:JSON.stringify({
-        job_id:job,title,description,category_id:category,made_for_kids:kids==='yes',private_upload_approved:true
+        job_id:job,title,description,category_id:category,made_for_kids:kids==='yes',private_upload_approved:true,expected_output:reviewedOutput
       })});
       setTasks(old=>[row,...old]);setJob(null);setConsent(false);setTitle('');setDescription('');setKids('');
     }catch(e){setError(e instanceof Error?e.message:String(e));}
@@ -67,7 +69,7 @@ export default function PrivateUploadPanel({workspaceId,channelId,remoteTitle,re
         {eligible.map(f=><option key={f.job_id} value={f.job_id}>Job #{f.job_id} · {f.quality} · {f.caption_mode} captions</option>)}
       </select></label>
       {!eligible.length&&<p>Finish a new approved assembly export in Media Studio.</p>}
-      {valid&&<video key={job} className="media-video" controls preload="metadata"
+      {valid&&<video key={reviewedOutput} className="media-video" controls preload="metadata"
         src={'/api/v1'+base+'/media/exports/'+job+'/preview'} aria-label="Preview video before private upload"/>}
       <label>Video title<input required maxLength={100} value={title} disabled={busy} onChange={e=>{setTitle(e.target.value);setConsent(false);}}/></label>
       <label>Description<textarea maxLength={5000} rows={5} value={description} disabled={busy} onChange={e=>{setDescription(e.target.value);setConsent(false);}}/></label>
