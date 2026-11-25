@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import platform_core as core, ai_director, media_intelligence, highlight_ranker, video_assembly
+from app import platform_core as core, ai_director, media_intelligence, highlight_ranker, video_assembly, render_queue
 
 
 @asynccontextmanager
@@ -17,6 +17,7 @@ async def lifespan(_app: FastAPI):
     media_intelligence.initialize()
     highlight_ranker.initialize()
     video_assembly.initialize()
+    render_queue.initialize()
     import httpx
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(20.0, connect=5.0),
@@ -28,7 +29,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Autopilot AI Local API", version="0.5.0", lifespan=lifespan,
+    title="Autopilot AI Local API", version="0.5.1", lifespan=lifespan,
     description="Local-only management API. No authentication or YouTube publishing yet.",
 )
 app.add_middleware(
@@ -88,7 +89,7 @@ def channel_or_404(workspace_id: int, channel_id: int):
 
 @app.get("/api/v1/health")
 def health():
-    return {"status": "ok", "version": "0.5.0", "mode": "local", "publishing": False}
+    return {"status": "ok", "version": "0.5.1", "mode": "local", "publishing": False}
 
 
 @app.get("/api/v1/workspaces")

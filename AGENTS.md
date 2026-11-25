@@ -55,3 +55,7 @@ Do not disable TLS verification to work around npm errors or add unapproved paid
 - Use temporary directories and os.replace to publish final files only after FFmpeg succeeds; clean temp output on failures. Preserve raw footage.
 - Only render from registered, SHA-256 verified local files. No unapproved download, music library, auto publishing or remote-upload actions.
 - Warn that synchronous multi-clip rendering may exceed browser/proxy timeouts; use the local CLI for long exports until a durable background worker is implemented.
+
+## Working product rule
+
+Keep production master and real channel data separate from development. Do not merge unverified changes. Back up databases before upgrades, preserve source footage, and document remaining manual recovery steps. Prefer real working integrations over placeholders. Do not claim published content, successful OAuth, performance gains or end-to-end verification without evidence. No external publishing without explicit authorization.

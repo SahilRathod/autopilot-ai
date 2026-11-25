@@ -4,9 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { api, type ProductionJob } from '../lib/api';
 
 type Clip = { id: number; start_seconds: number; duration_seconds: number; reason: string };
-type Export = { job_id: number; state: string; output_path: string; candidate_ids: number[];
-  caption_mode: string; quality: string; audio_mode: string };
-type ExportResult = { job_id: number; state: string; clip_count: number; youtube_uploaded: boolean };
+type ExportResult = { job_id: number; state: string };
 const clock = (value: number) => {
   const time = Math.max(0, Math.floor(value));
   return Math.floor(time / 60) + ':' + String(time % 60).padStart(2, '0');
@@ -21,22 +19,18 @@ export default function AssemblyStudio({workspaceId, channelId, candidates, jobs
   const [audioMode, setAudioMode] = useState<'preserve' | 'normalize' | 'mute'>('preserve');
   const [captionMode, setCaptionMode] = useState<'none' | 'soft' | 'burn'>('none');
   const [captionText, setCaptionText] = useState('');
-  const [exports, setExports] = useState<Export[]>([]);
-  const [previewJob, setPreviewJob] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const base = '/workspaces/' + workspaceId + '/channels/' + channelId + '/media';
 
+
   useEffect(() => {
-    let mounted = true;
-    api<Export[]>(base + '/exports')
-      .then(data => {
-        if (mounted) { setExports(data); setPreviewJob(data[0]?.job_id ?? null); }
-      })
-      .catch(e => { if (mounted) setError(e instanceof Error ? e.message : String(e)); });
-    return () => { mounted = false; };
-  }, [base]);
+    setSelection(current => current.filter(id => candidates.some(c => c.id === id)));
+  }, [candidates]);
+  useEffect(() => {
+    if (jobId !== null && !jobs.some(job => job.id === jobId)) setJobId(null);
+  }, [jobs, jobId]);
 
   function toggle(id: number, checked: boolean) {
     setSelection(current => checked
@@ -65,15 +59,13 @@ export default function AssemblyStudio({workspaceId, channelId, candidates, jobs
     }
     setError(''); setNotice(''); setBusy(true);
     try {
-      const result = await api<ExportResult>(base + '/assemble', {
+      const result = await api<ExportResult>(base + '/render-tasks', {
         method: 'POST',
         body: JSON.stringify({job_id: jobId, candidate_ids: selection,
           quality, audio_mode: audioMode, caption_mode: captionMode, caption_lines: lines}),
       });
-      setNotice('Created a local ' + result.clip_count + '-clip MP4 for job #' +
-        result.job_id + '. Nothing was uploaded to YouTube.');
-      const all = await api<Export[]>(base + '/exports');
-      setExports(all); setPreviewJob(result.job_id); setJobId(null);
+      setNotice('Job #' + result.job_id + ' saved to the local render queue. Check Render tasks for progress.');
+      setJobId(null);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   }
@@ -117,7 +109,7 @@ export default function AssemblyStudio({workspaceId, channelId, candidates, jobs
           })}
         </div>
         <p className="media-muted">{selection.length} clips · {clock(total)} total.
-          Shorts limit: 3 minutes. Long-form limit: 30 minutes.</p>
+          Shorts limit: 3 minutes. Up to eight 120-second clips per long-form export.</p>
         <h3>2. Choose an approved job</h3>
         <label>Production job
           <select aria-label="Approved assembly job" value={jobId ?? ''}
@@ -162,29 +154,10 @@ export default function AssemblyStudio({workspaceId, channelId, candidates, jobs
         </label>}
         <button className="button primary" type="submit"
           disabled={busy || selection.length === 0 || jobId === null || total <= 0 || total > max}>
-          {busy ? 'Encoding draft locally…' : 'Assemble local MP4'}
+          {busy ? 'Submitting…' : 'Queue local MP4'}
         </button>
-        <p className="media-muted">Local processing can take several minutes.
-          Keep FastAPI running. This never uploads content.</p>
+        <p className="media-muted">The separate local render worker processes saved tasks. You can leave this screen while it runs. Nothing is uploaded.</p>
       </form>
     </div>
-    {!!exports.length && <div className="assembly-results">
-      <h3>Finished local exports</h3>
-      <label>Select export for preview
-        <select aria-label="Select assembled export" value={previewJob ?? ''}
-          onChange={e => setPreviewJob(e.target.value ? Number(e.target.value) : null)}>
-          {exports.map(item => <option value={item.job_id} key={item.job_id}>
-            Job #{item.job_id} · {item.quality} · {item.caption_mode} captions
-          </option>)}
-        </select>
-      </label>
-      {previewJob !== null && <video key={previewJob} className="media-video"
-        controls preload="metadata" playsInline
-        src={'/api/v1' + base + '/exports/' + previewJob + '/preview'}
-        aria-label={'Preview finished MP4 for job ' + previewJob}>
-        This browser cannot play the exported video.
-      </video>}
-      <p className="media-muted">Saved in media/output/. Original video files remain unchanged.</p>
-    </div>}
   </section>;
 }
