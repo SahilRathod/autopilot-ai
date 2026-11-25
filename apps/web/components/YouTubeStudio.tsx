@@ -4,10 +4,11 @@ import {useEffect, useState} from 'react';
 import {api, type Channel} from '../lib/api';
 import PrivateUploadPanel from './PrivateUploadPanel';
 import ChannelInsights from './ChannelInsights';
+import PublicationPanel from './PublicationPanel';
 
 type Profile = {id:string; title:string; subscriber_count:string|null; video_count:string|null; view_count:string|null};
 type Status = {configured:boolean; windows_supported:boolean; connected:boolean;
-  upload_authorized:boolean; analytics_authorized:boolean; permission:string; channel:Profile|null; updated_at:string|null};
+  upload_authorized:boolean; analytics_authorized:boolean; manage_authorized:boolean; permission:string; channel:Profile|null; updated_at:string|null};
 type Auth = {authorization_url:string; expires_in:number};
 
 export default function YouTubeStudio({workspaceId, channels, onChanged}: {
@@ -31,11 +32,11 @@ export default function YouTubeStudio({workspaceId, channels, onChanged}: {
     return()=>{active=false;};
   },[base,reload]);
 
-  async function action(kind:'connect'|'authorize-upload'|'authorize-analytics'|'refresh'|'disconnect'|'forget'){
+  async function action(kind:'connect'|'authorize-upload'|'authorize-analytics'|'authorize-management'|'refresh'|'disconnect'|'forget'){
     if(!base||busy)return;
     setBusy(true);setError('');
     try{
-      if(kind==='connect'||kind==='authorize-upload'||kind==='authorize-analytics'){
+      if(kind==='connect'||kind==='authorize-upload'||kind==='authorize-analytics'||kind==='authorize-management'){
         const result=await api<Auth>(base+'/'+kind,{method:'POST',body:'{}'});
         setAuth(result);
       }else{
@@ -47,7 +48,7 @@ export default function YouTubeStudio({workspaceId, channels, onChanged}: {
   }
   return <section className="panel stack-form">
     <div className="panel-heading"><div><h2>Connect your YouTube channel</h2>
-      <p>Official Google OAuth. Read-only by default; private uploads require separate authorization. Public publishing is disabled.</p>
+      <p>Official Google OAuth. Read-only by default; private uploads require separate authorization. Public scheduling and individual replies require separate management authorization and exact approval.</p>
     </div><span className="chip">YouTube Data API</span></div>
     {!channels.length?<p>Create a local channel profile in Channels first.</p>:<>
       <label>Local channel profile<select value={current??''} disabled={busy}
@@ -82,9 +83,11 @@ export default function YouTubeStudio({workspaceId, channels, onChanged}: {
             onClick={()=>action('authorize-upload')}>Authorize private uploads</button>
         </>}
         {!status.analytics_authorized&&<button type="button" className="button outline" disabled={busy||!status.configured||!status.windows_supported} onClick={()=>action('authorize-analytics')}>Authorize read-only analytics</button>}
+        {!status.manage_authorized&&<><p>Management authorization is optional. Google grants broad rights to edit or delete videos and comments; this app uses it only for creator-approved schedules and individual replies.</p><button type="button" className="button outline" disabled={busy||!status.configured||!status.windows_supported} onClick={()=>action('authorize-management')}>Authorize publication and comment management</button></>}
         {auth&&<div className="tip"><p>Select the same linked channel and review the requested permissions.</p><a href={auth.authorization_url} target="_blank" rel="noreferrer">Continue to Google authorization</a></div>}
         <button type="button" className="button outline" disabled={busy} onClick={()=>{setReload(n=>n+1);onChanged();}}>Check authorization</button>
-        <ChannelInsights key={base} base={base} authorized={status.analytics_authorized}/>
+        <ChannelInsights key={base} base={base} authorized={status.analytics_authorized} management={status.manage_authorized}/>
+        {status.manage_authorized&&<PublicationPanel key={base} base={base} remoteTitle={status.channel.title}/>}
         {status.upload_authorized&&current!==null&&<PrivateUploadPanel key={base} workspaceId={workspaceId} channelId={current} remoteTitle={status.channel.title} remoteId={status.channel.id}/>}
         <label><input type="checkbox" checked={confirm} disabled={busy} onChange={e=>setConfirm(e.target.checked)}/> I understand revocation may affect other grants for the same account; forgetting locally does not revoke Google access.</label>
         <button type="button" className="button outline" disabled={busy||!confirm} onClick={()=>action('disconnect')}>Disconnect and revoke</button>

@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
-from app import youtube_connection as yt, youtube_upload as upload, youtube_insights as insights
+from app import youtube_connection as yt, youtube_upload as upload, youtube_insights as insights, youtube_actions as actions
 
 router = APIRouter(prefix="/api/v1", tags=["YouTube accounts"])
 
@@ -130,3 +130,38 @@ def analytics_report(request: Request, w: int, c: int):
 @router.get("/workspaces/{w}/channels/{c}/youtube/insights/videos/{video}/comments")
 def video_comments(request: Request, w: int, c: int, video: str):
     return checked(request, insights.comments, w, c, video)
+
+
+class ScheduleRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    job_id: int = Field(ge=1)
+    publish_at: str = Field(min_length=1,max_length=64)
+    approved: StrictBool
+
+
+class ReplyRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    video_id: str = Field(min_length=1,max_length=32)
+    parent_id: str = Field(min_length=1,max_length=200)
+    text: str = Field(min_length=1,max_length=10000)
+    approved: StrictBool
+
+
+@router.post("/workspaces/{w}/channels/{c}/youtube/authorize-management")
+def authorize_management(request: Request, w: int, c: int, body: ExplicitRequest):
+    return checked(request,yt.begin,w,c,False,False,True)
+
+
+@router.get("/workspaces/{w}/channels/{c}/youtube/actions")
+def action_history(request: Request,w: int,c: int):
+    return checked(request,actions.history,w,c)
+
+
+@router.post("/workspaces/{w}/channels/{c}/youtube/schedule")
+def schedule_publication(request: Request,w: int,c: int,body: ScheduleRequest):
+    return checked(request,actions.schedule,w,c,body.job_id,body.publish_at,body.approved)
+
+
+@router.post("/workspaces/{w}/channels/{c}/youtube/reply")
+def reply_to_comment(request: Request,w: int,c: int,body: ReplyRequest):
+    return checked(request,actions.reply,w,c,body.video_id,body.parent_id,body.text,body.approved)

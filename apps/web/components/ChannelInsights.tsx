@@ -10,29 +10,42 @@ type Comment={id:string;text:string;author:string;likes:number|null;published_at
 const labels:Record<string,string>={views:'Views',estimatedMinutesWatched:'Watch time (minutes)',averageViewDuration:'Average view duration (seconds)',averageViewPercentage:'Average viewed (%)',subscribersGained:'Subscribers gained',subscribersLost:'Subscribers lost'};
 const show=(value:string|number|null|undefined)=>value==null?'Unavailable':String(value);
 
-export default function ChannelInsights({base,authorized}:{base:string;authorized:boolean}){
+export default function ChannelInsights({base,authorized,management}:{base:string;authorized:boolean;management:boolean}){
   const [snapshot,setSnapshot]=useState<Snapshot|null>(null);
   const [report,setReport]=useState<Report|null>(null);
   const [comments,setComments]=useState<Comment[]|null>(null);
   const [selected,setSelected]=useState<Video|null>(null);
   const [draft,setDraft]=useState('');
+  const [parent,setParent]=useState<string|null>(null);
+  const [approved,setApproved]=useState(false);
+  const [notice,setNotice]=useState('');
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
-  useEffect(()=>{setSnapshot(null);setReport(null);setComments(null);setSelected(null);setDraft('');setError('');},[base]);
+  useEffect(()=>{setSnapshot(null);setReport(null);setComments(null);setSelected(null);setDraft('');setParent(null);setApproved(false);setNotice('');setError('');},[base]);
   async function load(kind:'snapshot'|'report'|'comments',video?:Video){
     if(busy)return;
     setBusy(true);setError('');
     try{
-      if(kind==='snapshot'){setSnapshot(await api<Snapshot>(base+'/insights'));setSelected(null);setComments(null);setDraft('');}
+      if(kind==='snapshot'){setSnapshot(await api<Snapshot>(base+'/insights'));setSelected(null);setComments(null);setDraft('');setParent(null);setApproved(false);setNotice('');}
       else if(kind==='report'){setReport(null);setReport(await api<Report>(base+'/insights/report'));}
-      else if(video){setSelected(video);setComments(null);setDraft('');setComments(await api<Comment[]>(base+'/insights/videos/'+encodeURIComponent(video.id)+'/comments'));}
+      else if(video){setSelected(video);setComments(null);setDraft('');setParent(null);setApproved(false);setNotice('');setComments(await api<Comment[]>(base+'/insights/videos/'+encodeURIComponent(video.id)+'/comments'));}
+    }catch(e){setError(e instanceof Error?e.message:String(e));}
+    finally{setBusy(false);}
+  }
+  async function sendReply(){
+    if(!selected||!parent||!draft.trim()||!approved||!management||busy)return;
+    setBusy(true);setError('');setNotice('');setApproved(false);
+    try{
+      await api(base+'/reply',{method:'POST',body:JSON.stringify({video_id:selected.id,parent_id:parent,text:draft,approved:true})});
+      setNotice('YouTube confirmed the reply. Refresh comments or check YouTube Studio.');
+      setDraft('');setParent(null);
     }catch(e){setError(e instanceof Error?e.message:String(e));}
     finally{setBusy(false);}
   }
   return <div className="stack-form">
     <h3>Channel insights</h3>
     <p>Actual YouTube metrics, fetched only on request. No synthetic numbers or automatic comments.</p>
-    {error&&<div className="notice danger" role="alert">{error}</div>}
+    {error&&<div className="notice danger" role="alert">{error}</div>}{notice&&<div className="tip" role="status">{notice}</div>}
     <button type="button" className="button outline" disabled={busy} onClick={()=>load('snapshot')}>Fetch latest video performance</button>
     {snapshot&&<>
       <p>Fetched {new Date(snapshot.fetched_at).toLocaleString()} · {snapshot.channel.title}</p>
@@ -46,8 +59,9 @@ export default function ChannelInsights({base,authorized}:{base:string;authorize
     <p>Watch time, average view duration, average percentage viewed and subscriber changes require separate read-only analytics authorization. Google may report data with a delay.</p>
     <button type="button" className="button outline" disabled={busy||!authorized} onClick={()=>load('report')}>Fetch analytics report</button>
     {report&&<><p>Requested dates: {report.start_date} to {report.end_date}</p><div className="two-col">{Object.entries(labels).map(([key,label])=><div key={key}><small>{label}</small><p><strong>{show(report.metrics[key])}</strong></p></div>)}</div></>}
-    {selected&&<><h3>Recent comments: {selected.title}</h3>{comments?.length===0&&<p>No visible comments returned.</p>}{comments?.map(c=><div className="job-row" key={c.id}><div className="job-main"><strong>{c.author}</strong><p style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{c.text}</p><small>{show(c.likes)} likes · {show(c.replies)} replies</small></div></div>)}
-      <label>Optional reply draft (not sent)<textarea rows={3} maxLength={10000} value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Write and review your own reply…"/></label>
+    {selected&&<><h3>Recent comments: {selected.title}</h3>{comments?.length===0&&<p>No visible comments returned.</p>}{comments?.map(c=><div className="job-row" key={c.id}><div className="job-main"><strong>{c.author}</strong><p style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{c.text}</p><small>{show(c.likes)} likes · {show(c.replies)} replies</small>{management&&<button type="button" className="button outline small" disabled={busy} onClick={()=>{setParent(c.id);setApproved(false);setNotice('');}}>Reply to this comment</button>}</div></div>)}
+      <label>Optional reply draft (not sent)<textarea rows={3} maxLength={10000} value={draft} onChange={e=>{setDraft(e.target.value);setApproved(false);}} placeholder="Write and review your own reply…"/></label>
+      {management&&parent&&<><p>Replying to: {comments?.find(c=>c.id===parent)?.author} · {comments?.find(c=>c.id===parent)?.text}</p><label><input type="checkbox" checked={approved} disabled={busy||!draft.trim()} onChange={e=>setApproved(e.target.checked)}/> I approve sending this exact reply on YouTube.</label><button type="button" className="button primary" disabled={busy||!approved||!draft.trim()} onClick={sendReply}>Post approved reply</button></>}
       <p>Copy your draft into <a href={'https://studio.youtube.com/video/'+selected.id+'/comments'} target="_blank" rel="noreferrer">YouTube Studio</a> to respond manually.</p></>}
   </div>;
 }

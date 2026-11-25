@@ -15,7 +15,7 @@ A refresh credential is encrypted with Windows DPAPI for the current user, store
 
 Google can revoke or expire refresh tokens (including External Testing mode). If refresh fails, inspect your Google account permissions. Revocation can affect grants for the same account and application. A disconnected/expired authorization does not stop local media production. The first slice expects one channel returned by Google's authorized mine=true lookup; ambiguous multiple-channel responses are refused rather than silently linking the wrong channel.
 
-Public publishing and automatic engagement are not enabled. Channel counts come from the actual YouTube API and may be rounded or unavailable. Automated tests mock Google requests. Live Google consent and Windows DPAPI verification require a Windows device and valid Google Cloud configuration.
+Unattended publishing and automatic engagement are not enabled. Channel counts come from the actual YouTube API and may be rounded or unavailable. Automated tests mock Google requests. Live Google consent and Windows DPAPI verification require a Windows device and valid Google Cloud configuration.
 
 If Google revocation fails or the original credential cannot be unlocked, confirm and use Forget local connection only. It deletes the local encrypted credential and profile, not the Google grant. Remove that grant separately in https://myaccount.google.com/connections. Windows CI tests real DPAPI encryption/decryption using a synthetic credential.
 
@@ -26,7 +26,7 @@ If Google revocation fails or the original credential cannot be unlocked, confir
 2. Produce an approved assembly MP4 in Media Studio. Only finished, scoped assembly exports are eligible; older legacy single-clip files are not supported by this upload path.
 3. In YouTube accounts select the reviewed export, enter the title, description, category and the actual made-for-kids designation. Preview the exact video. Explicitly approve private upload to the displayed remote channel.
 4. The launcher starts a fourth terminal: the YouTube upload worker. For manual startup run .\.venv\Scripts\python.exe -m app.youtube_upload. The worker does no network upload until you explicitly queue a task.
-5. Monitor confirmed uploaded bytes and status. An uploaded result includes the actual YouTube video ID. YouTube processing may still be pending; review the private video in YouTube Studio. Public publishing is not available.
+5. Monitor confirmed uploaded bytes and status. An uploaded result includes the actual YouTube video ID. YouTube processing may still be pending; review the private video in YouTube Studio. An explicitly approved future public schedule is available with optional management permission.
 
 The upload uses 8 MiB resumable chunks, a persisted encrypted session URI, a SHA-256 fingerprint, a per-database worker lock, and explicit approval. A lost response resumes the same session on retry. If the session expires or Google does not confirm the expected private video identity, the task becomes review_required; check YouTube Studio before attempting any new upload. Never create a duplicate upload just because a network response was lost. Uploads default to private and subscriber notification is disabled. A retry requires the original linked channel; no automatic cross-channel fallback.
 
@@ -37,8 +37,19 @@ Pending uploads can be cancelled before the worker claims them. Cancellation doe
 
 ## V0.8 channel insights
 
-After linking a channel, select **Fetch latest video performance** to fetch up to 50 accessible uploads and their actual lifetime view/like/comment counts. Unavailable metrics remain unavailable; they are not replaced with zero. The comment review screen loads up to 50 top-level comments on a video owned by that linked channel; reply drafts remain local to the screen. Use YouTube Studio to post a reviewed reply.
+After linking a channel, select **Fetch latest video performance** to fetch up to 50 accessible uploads and their actual lifetime view/like/comment counts. Unavailable metrics remain unavailable; they are not replaced with zero. The comment review screen loads up to 50 top-level comments on a video owned by that linked channel; reply drafts remain local to the screen. Use YouTube Studio to post a reviewed reply, or the optional management-authorized individual reply action.
 
 For watch time and average percentage viewed, enable **YouTube Analytics API** in the same Google Cloud project, choose **Authorize read-only analytics**, and consent to the new scope. Select the same channel. The app requests a 28-day period ending yesterday UTC; Google may omit recent days due to reporting delays. Existing upload permission must also remain granted if already enabled. Reports and comments are fetched on demand and not persisted in SQLite.
 
 No live Google account authorization or actual private upload has been tested in automated CI. Review actual metrics and provider permissions on Windows.
+
+
+## V0.9 approved publication and comment management
+
+The separate **Authorize publication and comment management** button requests Google's broad youtube.force-ssl scope. Google may describe this as permission to edit and delete videos/comments; Autopilot AI does not implement deletion or bulk engagement. Existing grants must remain authorized.
+
+For a public schedule, select a confirmed private upload, open it in YouTube Studio to inspect the final video/metadata, and choose a timezone-aware publication time at least one hour ahead. Explicitly approve the exact video and time. The API requires the linked owner, processed private video, matching audience declaration and no existing schedule. It sends a single request to YouTube and verifies the provider response. A confirmed schedule is not a claim the video is already public. YouTube handles the schedule; manage changes/cancellations in YouTube Studio.
+
+For replies, review a top-level comment on an owned video, enter your own exact text, select that comment and explicitly approve posting. No bulk replies or autonomous engagement. The app records requested and confirmed actions. If a request is ambiguous, verify on YouTube Studio; it will not automatically repeat the mutation.
+
+These integrations are tested against mocked API responses only. Verify real OAuth, video processing, and scheduling in a test channel before using production content.
