@@ -42,6 +42,11 @@ def render_job(workspace_id, job_id, source_name, start=0.0, seconds=30.0):
             (job_id,workspace_id)
         ).fetchone():
             raise ValueError("This job already has an assembled export or active assembly")
+        task_table = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='render_tasks'"
+        ).fetchone()
+        if task_table and db.execute("SELECT 1 FROM render_tasks WHERE job_id=?", (job_id,)).fetchone():
+            raise ValueError("This job belongs to the assembly render queue")
         try:
             db.execute("""INSERT INTO job_renders(job_id,workspace_id,channel_id,state,source_name)
                        VALUES(?,?,?,'rendering',?)""",

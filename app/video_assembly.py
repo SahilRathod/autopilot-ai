@@ -129,9 +129,9 @@ def export_file(workspace_id, channel_id, job_id):
     return path
 
 
-def export_job(workspace_id, channel_id, job_id, candidate_ids, quality="fast",
+def prepare_job(workspace_id, channel_id, job_id, candidate_ids, quality="fast",
                audio_mode="preserve", caption_mode="none", caption_lines=None):
-    """An explicitly approved local job assembles 1..8 selected clips in supplied order."""
+    """Validate approval, candidate scope and export settings before processing."""
     caption_lines = [] if caption_lines is None else caption_lines
     _verify_settings(audio_mode, quality, caption_mode, caption_lines)
     if (not isinstance(candidate_ids, list) or not 1 <= len(candidate_ids) <= MAX_CLIPS
@@ -169,6 +169,16 @@ def export_job(workspace_id, channel_id, job_id, candidate_ids, quality="fast",
     if not math.isfinite(total) or total <= 0 or total > (180 if job["format"] == "short" else 1800):
         raise ValueError("Total clip time exceeds the approved format limit")
     clean_lines = _captions(caption_lines, caption_mode, total)
+    return job, rows, total, clean_lines
+
+
+def export_job(workspace_id, channel_id, job_id, candidate_ids, quality="fast",
+               audio_mode="preserve", caption_mode="none", caption_lines=None,
+               *, _queue_worker=False):
+    """Render approved clips, using existing synchronous path or durable worker."""
+    job, rows, total, clean_lines = prepare_job(
+        workspace_id, channel_id, job_id, candidate_ids, quality,
+        audio_mode, caption_mode, caption_lines)
     # Verify each unique imported file once against its original SHA-256.
     source_cache = {}
     for row in rows:
@@ -195,6 +205,15 @@ def export_job(workspace_id, channel_id, job_id, candidate_ids, quality="fast",
             raise ValueError("Production job is no longer approved")
         if db.execute("SELECT 1 FROM job_renders WHERE job_id=?", (job_id,)).fetchone():
             raise ValueError("This production job already has a legacy render")
+        task_table = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='render_tasks'"
+        ).fetchone()
+        task = db.execute("SELECT state FROM render_tasks WHERE job_id=?", (job_id,)).fetchone() if task_table else None
+        if _queue_worker:
+            if task is None or task["state"] != "running":
+                raise ValueError("No active render worker claim")
+        elif task is not None:
+            raise ValueError("This job belongs to the render queue; use its controls")
         try:
             db.execute("""
                 INSERT INTO assembly_exports(job_id,workspace_id,channel_id,state,
@@ -210,6 +229,8 @@ def export_job(workspace_id, channel_id, job_id, candidate_ids, quality="fast",
             segments, target, job["format"], quality, audio_mode, caption_mode, clean_lines)
         if not Path(output).is_file() or Path(output).stat().st_size <= 0:
             raise RuntimeError("Assembler did not produce a complete video")
+        if _queue_worker:
+            validate_output(Path(output), job["format"], quality, caption_mode, total)
         with core.connect() as db:
             db.execute("""UPDATE assembly_exports SET state='ready',output_path=?
                           WHERE job_id=? AND workspace_id=?""",
@@ -309,3 +330,36 @@ def render_assembled_video(segments, target, preset, quality, audio_mode, captio
             result = staged
         os.replace(result, target)
     return str(target)
+
+
+def probe_output(path):
+    if not shutil.which("ffprobe"):
+        raise RuntimeError("FFprobe required to validate queued exports")
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_format", "-show_streams", "-of", "json", str(path)],
+            capture_output=True, text=True, check=True, timeout=30)
+        return json.loads(result.stdout)
+    except (subprocess.SubprocessError, ValueError) as exc:
+        raise ValueError("Export could not be verified by FFprobe") from exc
+
+
+def validate_output(path, preset, quality, caption_mode, expected_seconds):
+    """Verify actual media streams, resolution and duration before queue completion."""
+    data = probe_output(path)
+    streams = data.get("streams", [])
+    video = next((s for s in streams if s.get("codec_type") == "video"), {})
+    audio = next((s for s in streams if s.get("codec_type") == "audio"), {})
+    width, height = QUALITY[quality][preset]
+    if (video.get("codec_name") != "h264" or video.get("width") != width
+            or video.get("height") != height or audio.get("codec_name") != "aac"):
+        raise ValueError("Export has unexpected video/audio format or resolution")
+    if caption_mode == "soft" and not any(s.get("codec_type") == "subtitle"
+                                          and s.get("codec_name") == "mov_text" for s in streams):
+        raise ValueError("Export is missing its subtitle track")
+    try:
+        duration = float(data["format"]["duration"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("Export duration unavailable") from exc
+    if not math.isfinite(duration) or abs(duration - expected_seconds) > max(0.75, expected_seconds * 0.01):
+        raise ValueError("Export duration does not match requested clips")
