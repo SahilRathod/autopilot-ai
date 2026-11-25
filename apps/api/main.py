@@ -33,8 +33,8 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Autopilot AI Local API", version="0.8.0", lifespan=lifespan,
-    description="Local-only management API. Local loopback API; explicit private YouTube uploads supported, public publishing disabled.",
+    title="Autopilot AI Local API", version="0.9.0", lifespan=lifespan,
+    description="Local-only management API. Local loopback API; explicit private YouTube uploads supported, explicit public schedules with additional management consent; unattended publishing disabled.",
 )
 app.add_middleware(
     CORSMiddleware,
@@ -93,7 +93,7 @@ def channel_or_404(workspace_id: int, channel_id: int):
 
 @app.get("/api/v1/health")
 def health():
-    return {"status": "ok", "version": "0.8.0", "mode": "local", "publishing": False, "private_uploads": True}
+    return {"status": "ok", "version": "0.9.0", "mode": "local", "publishing": False, "private_uploads": True, "approved_scheduling": True}
 
 
 @app.get("/api/v1/workspaces")
@@ -190,7 +190,7 @@ def overview(workspace_id: int = Path(ge=1)):
         "states": {state: sum(job["state"] == state for job in all_jobs) for state in core.STATES},
         "youtube_connected": youtube_connection.workspace_connected(workspace_id),
         "ai_enabled": True, "gemini_configured": ai_director.gemini_enabled(),
-        "publishing_enabled": False,
+        "publishing_enabled": False, "approved_scheduling": True,
     }
 
 
