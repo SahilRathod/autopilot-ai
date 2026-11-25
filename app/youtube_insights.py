@@ -1,5 +1,5 @@
 """Read-only, on-demand YouTube Data API insights. No local analytics cache."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import re
 
 from app import youtube_connection as yt
@@ -82,3 +82,31 @@ def comments(w, c, video):
                            "author":info.get("authorDisplayName",""),"likes":info.get("likeCount"),
                            "published_at":info.get("publishedAt"),"replies":thread.get("totalReplyCount")})
     return result
+
+
+REPORT_METRICS = ("views", "estimatedMinutesWatched", "averageViewDuration",
+                  "averageViewPercentage", "subscribersGained", "subscribersLost")
+
+
+def report(w, c):
+    link = yt._link(w,c)
+    if not link or not link["analytics_authorized"]:
+        raise ValueError("Authorize read-only YouTube Analytics first")
+    remote,access = _access(w,c)
+    if yt.read_channel(access)["id"] != remote:
+        raise ValueError("Linked channel identity could not be verified")
+    # Exclude today; Google may lag by additional days and omit unavailable data.
+    end = datetime.now(timezone.utc).date() - timedelta(days=1)
+    start = end - timedelta(days=27)
+    data = yt._json(yt._request("GET","https://youtubeanalytics.googleapis.com/v2/reports",
+        headers={"Authorization":"Bearer "+access},
+        params={"ids":"channel==MINE","startDate":start.isoformat(),"endDate":end.isoformat(),
+                "metrics":",".join(REPORT_METRICS)}))
+    columns = [col.get("name") for col in data.get("columnHeaders", [])]
+    rows = data.get("rows", [])
+    if len(rows)>1 or (rows and len(rows[0])!=len(columns)):
+        raise RuntimeError("Unexpected YouTube Analytics report shape")
+    metrics = dict(zip(columns, rows[0])) if rows else {}
+    return {"start_date":start.isoformat(),"end_date":end.isoformat(),
+            "fetched_at":datetime.now(timezone.utc).isoformat(),
+            "metrics":{key:metrics.get(key) for key in REPORT_METRICS}}
