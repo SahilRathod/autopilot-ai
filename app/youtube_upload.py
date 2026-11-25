@@ -105,6 +105,9 @@ def enqueue(w,c,job,title,description,category_id,made_for_kids,consent):
             raise ValueError("YouTube authorization changed; review and approve again")
         if db.execute("SELECT 1 FROM youtube_uploads WHERE job_id=?",(job,)).fetchone():
             raise ValueError("This job already has an upload record")
+        latest=db.execute("SELECT output_path FROM assembly_exports WHERE job_id=? AND state='ready'",(job,)).fetchone()
+        if not latest or latest["output_path"]!=export["output_path"]:
+            raise ValueError("Export changed during upload approval; review the newest video")
         db.execute("""INSERT INTO youtube_uploads
             (job_id,workspace_id,channel_id,remote_channel_id,state,title,description,category_id,made_for_kids,file_sha256,file_bytes)
             VALUES(?,?,?,?,'pending',?,?,?,?,?,?)""",
