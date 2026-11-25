@@ -22,7 +22,7 @@ This is a **release candidate**, not a production-certified V1.0. Automated CI u
 
 1. Stop the old services. Copy the data folder and preserve media/raw and media/output before upgrading. Keep the previous working checkout.
 2. Update using git pull --ff-only origin master. Run the maintenance doctor and Python regression suite; start with start.ps1. Verify the health endpoint and dashboard.
-3. Create a disposable workspace/channel. Import your own short gameplay clip, scan and rank it, review an offline draft, approve a job, assemble and preview a real MP4. Verify duration and audio, subtitles, narration mix, thumbnail, and revisions. Stop/restart the worker with a queued job and confirm the expected local state.
+3. Run the isolated local acceptance command below. Then create a disposable workspace/channel. Import your own short gameplay clip, scan and rank it, review an offline draft, approve a job, assemble and preview a real MP4. Verify duration and audio, subtitles, narration mix, thumbnail, and revisions. Stop/restart the worker with a queued job and confirm the expected local state.
 4. If using optional Whisper or Gemini, test them with a small sample and your own explicit setup and budget; inspect content before approval. Neither is mandatory for the offline workflow.
 5. Enable YouTube Data API v3 and optionally YouTube Analytics API in your own Google Cloud project. Save the desktop OAuth client JSON in the ignored data directory. Follow YOUTUBE_SETUP.md. Consent on your Windows user account; verify the actual linked channel, then separately grant upload/analytics permissions.
 6. Upload an approved harmless test export privately. Verify the actual video ID, private visibility, and successful playback in YouTube Studio. Verify real analytics counts with the provider. On a test channel only, if desired, separately authorize management, review the exact video, explicitly schedule a future public time and verify or cancel the schedule in YouTube Studio. Test an individual approved reply only when appropriate. Do not grant permissions or schedule a publication solely to satisfy a test.
@@ -37,3 +37,19 @@ This is a **release candidate**, not a production-certified V1.0. Automated CI u
 - Keep the working checkout available during development; use a separate worktree with separate data/media and dev ports.
 
 **Final V1.0 decision:** only after the relevant Windows and real account acceptance results are recorded, not just because version metadata says 1.0.
+
+## Automated acceptance on your laptop (RC2)
+
+Run from the repository root in PowerShell after installing requirements and FFmpeg:
+
+```powershell
+.\.venv\Scripts\python.exe -m app.acceptance | Tee-Object -FilePath acceptance-report.json
+```
+
+For an actual footage sample you own, use the optional argument (example filename; substitute your own):
+
+```powershell
+.\.venv\Scripts\python.exe -m app.acceptance --footage "media/raw/your-clip.mp4" | Tee-Object -FilePath acceptance-report.json
+```
+
+The runner copies at most 250 MiB of existing video into a temporary sandbox (minimum two seconds), or generates a synthetic sample locally. It exercises the real planner/ranking/approval/render pipeline, a simulated interrupted queue claim, caption mux, narration tone mixing, thumbnail extraction, revision preservation and database backup. It restores application paths and deletes temporary data; it never uploads, calls Google/Gemini, or uses your production database. The JSON records OS, CPU count, free temporary disk, FFmpeg version and measured output resolution/render seconds. A failed stage returns a nonzero exit code. Share the report if you want help diagnosing a failure. No user video contents, credentials or source paths are included. The report is evidence for local execution only: inspect actual video quality separately, and test OAuth and real YouTube operations separately. Optional AI verification is not included.

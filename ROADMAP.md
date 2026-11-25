@@ -71,3 +71,5 @@ Until V0.6, no real publishing occurs.
 
 - V0.9: management scope, explicitly approved provider scheduling and individual comment replies, duplicate protection and review-required outcomes.
 - V1.0 RC1: browser integration checks, full Windows FFmpeg testing, existing-record upgrade regression and documented release acceptance. Final V1.0 remains gated on actual Windows and Google account acceptance.
+
+- V1.0 RC2: isolated local end-to-end acceptance runner with measured hardware/render timings, optional owned footage and shareable diagnostic output; final live-account gates unchanged.
