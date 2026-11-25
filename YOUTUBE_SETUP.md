@@ -15,7 +15,7 @@ A refresh credential is encrypted with Windows DPAPI for the current user, store
 
 Google can revoke or expire refresh tokens (including External Testing mode). If refresh fails, inspect your Google account permissions. Revocation can affect grants for the same account and application. A disconnected/expired authorization does not stop local media production. The first slice expects one channel returned by Google's authorized mine=true lookup; ambiguous multiple-channel responses are refused rather than silently linking the wrong channel.
 
-Public publishing, automated engagement, and audience retention analytics are not enabled. Channel counts come from the actual YouTube API and may be rounded or unavailable. Automated tests mock Google requests. Live Google consent and Windows DPAPI verification require a Windows device and valid Google Cloud configuration.
+Public publishing and automatic engagement are not enabled. Channel counts come from the actual YouTube API and may be rounded or unavailable. Automated tests mock Google requests. Live Google consent and Windows DPAPI verification require a Windows device and valid Google Cloud configuration.
 
 If Google revocation fails or the original credential cannot be unlocked, confirm and use Forget local connection only. It deletes the local encrypted credential and profile, not the Google grant. Remove that grant separately in https://myaccount.google.com/connections. Windows CI tests real DPAPI encryption/decryption using a synthetic credential.
 
@@ -33,3 +33,12 @@ The upload uses 8 MiB resumable chunks, a persisted encrypted session URI, a SHA
 API quota, Google's consent restrictions, channel eligibility and processing times may prevent uploads. All automated integration tests use synthetic data and mocked Google responses. Live account consent and an actual private upload still must be verified on the creator's Windows machine.
 
 Pending uploads can be cancelled before the worker claims them. Cancellation does not delete any existing remote video or undo bytes already sent during a previously interrupted attempt. Active transfers cannot yet be cancelled from the UI.
+
+
+## V0.8 channel insights
+
+After linking a channel, select **Fetch latest video performance** to fetch up to 50 accessible uploads and their actual lifetime view/like/comment counts. Unavailable metrics remain unavailable; they are not replaced with zero. The comment review screen loads up to 50 top-level comments on a video owned by that linked channel; reply drafts remain local to the screen. Use YouTube Studio to post a reviewed reply.
+
+For watch time and average percentage viewed, enable **YouTube Analytics API** in the same Google Cloud project, choose **Authorize read-only analytics**, and consent to the new scope. Select the same channel. The app requests a 28-day period ending yesterday UTC; Google may omit recent days due to reporting delays. Existing upload permission must also remain granted if already enabled. Reports and comments are fetched on demand and not persisted in SQLite.
+
+No live Google account authorization or actual private upload has been tested in automated CI. Review actual metrics and provider permissions on Windows.
