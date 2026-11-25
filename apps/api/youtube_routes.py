@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
-from app import youtube_connection as yt, youtube_upload as upload
+from app import youtube_connection as yt, youtube_upload as upload, youtube_insights as insights
 
 router = APIRouter(prefix="/api/v1", tags=["YouTube accounts"])
 
@@ -110,3 +110,23 @@ def retry_upload(request: Request, w: int, c: int, job: int, body: ExplicitReque
 @router.post("/workspaces/{w}/channels/{c}/youtube/uploads/{job}/cancel")
 def cancel_upload(request: Request, w: int, c: int, job: int, body: ExplicitRequest):
     return checked(request,upload.cancel,w,c,job)
+
+
+@router.post("/workspaces/{w}/channels/{c}/youtube/authorize-analytics")
+def authorize_analytics(request: Request, w: int, c: int, body: ExplicitRequest):
+    return checked(request, yt.begin, w, c, False, True)
+
+
+@router.get("/workspaces/{w}/channels/{c}/youtube/insights")
+def channel_insights(request: Request, w: int, c: int):
+    return checked(request, insights.snapshot, w, c)
+
+
+@router.get("/workspaces/{w}/channels/{c}/youtube/insights/report")
+def analytics_report(request: Request, w: int, c: int):
+    return checked(request, insights.report, w, c)
+
+
+@router.get("/workspaces/{w}/channels/{c}/youtube/insights/videos/{video}/comments")
+def video_comments(request: Request, w: int, c: int, video: str):
+    return checked(request, insights.comments, w, c, video)
