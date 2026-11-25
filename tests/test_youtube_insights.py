@@ -100,3 +100,15 @@ class InsightsTests(unittest.TestCase):
             self.assertEqual(client.get(path).json(),{"videos":[]})
         with TestClient(app,base_url="http://external.test") as client:
             self.assertEqual(client.get(path).status_code,403)
+
+    def test_analytics_consent_requests_previous_upload_scope(self):
+        from urllib.parse import parse_qs, urlsplit
+        self.addCleanup(yt.clear_pending)
+        with core.connect() as db:
+            db.execute("UPDATE youtube_links SET upload_authorized=1 WHERE local_channel_id=?", (self.c,))
+        with patch.object(yt,"protect",return_value=b"placeholder"):
+            url=yt.begin(self.w,self.c,False,True)["authorization_url"]
+        query=parse_qs(urlsplit(url).query)
+        self.assertEqual(set(query["scope"][0].split()),{yt.READ_SCOPE,yt.UPLOAD_SCOPE,yt.ANALYTICS_SCOPE})
+        self.assertTrue(yt.status(self.w,self.c)["upload_authorized"])
+        self.assertFalse(yt.status(self.w,self.c)["analytics_authorized"])
