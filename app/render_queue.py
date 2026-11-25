@@ -168,7 +168,12 @@ def main():
             if args.once:
                 break
             if result is None:
-                time.sleep(2)
+                from app import production_operator
+                planned = production_operator.run_once()
+                if planned:
+                    print(json.dumps(planned), flush=True)
+                else:
+                    time.sleep(2)
         except KeyboardInterrupt:
             break
         except RuntimeError as exc:

@@ -100,6 +100,7 @@ def jobs(workspace_id,channel_id=None):
 
 def transition(workspace_id,job_id,target):
     with connect() as c:
+        c.execute("BEGIN IMMEDIATE")
         job=c.execute('SELECT * FROM production_jobs WHERE workspace_id=? AND id=?',(workspace_id,job_id)).fetchone()
         if job is None: raise ValueError('Job not found in workspace')
         if target not in STATES[job['state']]: raise ValueError('Invalid transition %s -> %s' % (job['state'],target))

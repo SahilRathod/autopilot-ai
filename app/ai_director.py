@@ -232,6 +232,7 @@ def store_generated(w, c, topic, fmt, provider, fingerprint, pack):
 def submit(w,c,draft_id):
     initialize();channel(w,c)
     with core.connect() as db:
+        db.execute("BEGIN IMMEDIATE")
         row=db.execute("SELECT * FROM ai_drafts WHERE id=? AND workspace_id=? AND channel_id=?",
                        (draft_id,w,c)).fetchone()
         if row is None: raise ValueError("Draft not found in channel")
@@ -244,3 +245,36 @@ def submit(w,c,draft_id):
         db.execute("INSERT INTO audit_log(workspace_id,channel_id,job_id,action) VALUES(?,?,?,'ai_job_created')",
                    (w,c,jid))
         return jid
+
+
+def edit_draft(w,c,draft_id,title,hook,script,description):
+    """User-authored revision before approval; do not mutate reviewed content."""
+    initialize()
+    channel(w,c)
+    fields={"title":title,"hook":hook,"script":script,"description":description}
+    limits={"title":100,"hook":1000,"script":12000,"description":5000}
+    for key,value in fields.items():
+        if not isinstance(value,str) or not value.strip() or len(value.strip())>limits[key]:
+            raise ValueError("Invalid draft "+key)
+    if len(description.encode("utf-8"))>5000:
+        raise ValueError("Description exceeds 5000 UTF-8 bytes")
+    with core.connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        row=db.execute("SELECT * FROM ai_drafts WHERE id=? AND workspace_id=? AND channel_id=?",(draft_id,w,c)).fetchone()
+        if not row:
+            raise ValueError("Draft not found in channel")
+        if row["job_id"] is not None:
+            job=db.execute("SELECT state FROM production_jobs WHERE id=? AND workspace_id=? AND channel_id=?",
+                           (row["job_id"],w,c)).fetchone()
+            if not job or job["state"] not in ("draft","ready_for_review"):
+                raise ValueError("Approved or rejected content cannot be edited; create a new draft")
+        pack=validate_pack(json.loads(row["result_json"])|{k:v.strip() for k,v in fields.items()})
+        fingerprint=hashlib.sha256(("edited:"+str(draft_id)+json.dumps(pack,sort_keys=True)).encode()).hexdigest()
+        db.execute("UPDATE ai_drafts SET result_json=?,fingerprint=? WHERE id=?",
+                   (json.dumps(pack,ensure_ascii=False),fingerprint,draft_id))
+        if row["job_id"] is not None:
+            db.execute("UPDATE production_jobs SET title=? WHERE id=?",(pack["title"],row["job_id"]))
+        db.execute("INSERT INTO audit_log(workspace_id,channel_id,job_id,action) VALUES(?,?,?,'ai_draft_edited')",
+                   (w,c,row["job_id"]))
+        result=db.execute("SELECT * FROM ai_drafts WHERE id=?",(draft_id,)).fetchone()
+        return dict(result)|{"result":pack,"cached":False}

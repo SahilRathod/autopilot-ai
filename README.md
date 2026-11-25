@@ -105,3 +105,7 @@ Separate upload authorization, reviewed MP4 and explicit private-upload approval
 ## V0.6.1 post-production
 
 Media Studio supports accurate SRT timing, lossless video-stream subtitle muxing, imported narration mixing, frame thumbnails and selectable export revisions. Optional offline Whisper transcription requires a separately installed local model. See [Post-production guide](POSTPRODUCTION.md).
+
+## V0.7 local content planner
+
+Schedule offline content drafts and optional existing-footage analysis. The shared local worker prepares review jobs and suggests non-overlapping clips. Edit scripts before approval. See [Operator guide](OPERATOR.md).

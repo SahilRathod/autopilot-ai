@@ -64,3 +64,5 @@ Until V0.6, no real publishing occurs.
 - V0.6 private upload implementation: reviewed assembly export, scope upgrade, explicit per-video consent, private-only resumable upload queue and provider identity checks. Live upload and Google consent remain release verification gates.
 
 - V0.6.1: timestamped caption files, optional offline transcription CLI, narration audio mixing, local frame thumbnail and safe export revision history. Full editing timeline, generated graphics, hardware benchmarks and actual speech-recognition validation remain open.
+
+- V0.7: durable scheduled offline draft generation, optional clip recommendations, editable review drafts, explicit render handoff and retry/cancel controls. Real-time trend research, semantic game events and public publishing remain separate work.
