@@ -17,6 +17,7 @@ from app import platform_core as core, media_intelligence as media
 READ_SCOPE = "https://www.googleapis.com/auth/youtube.readonly"
 UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
 ANALYTICS_SCOPE = "https://www.googleapis.com/auth/yt-analytics.readonly"
+MANAGE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
@@ -38,12 +39,15 @@ def initialize():
             connected_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
             upload_authorized INTEGER NOT NULL DEFAULT 0,
-            analytics_authorized INTEGER NOT NULL DEFAULT 0
+            analytics_authorized INTEGER NOT NULL DEFAULT 0,
+            manage_authorized INTEGER NOT NULL DEFAULT 0
         )""")
         if "upload_authorized" not in {r["name"] for r in db.execute("PRAGMA table_info(youtube_links)")}:
             db.execute("ALTER TABLE youtube_links ADD COLUMN upload_authorized INTEGER NOT NULL DEFAULT 0")
         if "analytics_authorized" not in {r["name"] for r in db.execute("PRAGMA table_info(youtube_links)")}:
             db.execute("ALTER TABLE youtube_links ADD COLUMN analytics_authorized INTEGER NOT NULL DEFAULT 0")
+        if "manage_authorized" not in {r["name"] for r in db.execute("PRAGMA table_info(youtube_links)")}:
+            db.execute("ALTER TABLE youtube_links ADD COLUMN manage_authorized INTEGER NOT NULL DEFAULT 0")
 
 
 def _dpapi(value, decrypt=False):
@@ -123,6 +127,7 @@ def status(w, c):
             "connected": row is not None,
             "upload_authorized": bool(row and row["upload_authorized"]),
             "analytics_authorized": bool(row and row["analytics_authorized"]),
+            "manage_authorized": bool(row and row["manage_authorized"]),
             "permission": "read and private upload" if row and row["upload_authorized"] else "read-only",
             "channel": json.loads(row["profile_json"]) if row else None,
             "updated_at": row["updated_at"] if row else None}
@@ -133,16 +138,17 @@ def clear_pending():
         _pending.clear()
 
 
-def begin(w, c, upload=False, analytics=False):
+def begin(w, c, upload=False, analytics=False, manage=False):
     with _lock:
         old = _link(w, c)
-        if old and not ((upload and not old["upload_authorized"]) or (analytics and not old["analytics_authorized"])):
+        if old and not ((upload and not old["upload_authorized"]) or (analytics and not old["analytics_authorized"]) or (manage and not old["manage_authorized"])):
             raise ValueError("Disconnect the existing channel before reconnecting")
-        if analytics and not old:
-            raise ValueError("Connect a channel before enabling analytics")
+        if (analytics or manage) and not old:
+            raise ValueError("Connect a channel before upgrading permissions")
         upload = bool(upload or (old and old["upload_authorized"]))
         analytics = bool(analytics or (old and old["analytics_authorized"]))
-        requested_scopes = [READ_SCOPE] + ([UPLOAD_SCOPE] if upload else []) + ([ANALYTICS_SCOPE] if analytics else [])
+        manage = bool(manage or (old and old["manage_authorized"]))
+        requested_scopes = [READ_SCOPE] + ([UPLOAD_SCOPE] if upload else []) + ([ANALYTICS_SCOPE] if analytics else []) + ([MANAGE_SCOPE] if manage else [])
         client = config()
         protect("credential-storage-check")  # fail before asking for consent on unsupported systems
         now = time.monotonic()
@@ -156,7 +162,7 @@ def begin(w, c, upload=False, analytics=False):
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
         uri = redirect_uri()
         _pending[state] = dict(w=w, c=c, expires=now + 600, verifier=verifier,
-                               client_id=client["client_id"], redirect_uri=uri, upload=upload, analytics=analytics,
+                               client_id=client["client_id"], redirect_uri=uri, upload=upload, analytics=analytics, manage=manage,
                                required_scopes=requested_scopes,
                                expected_remote=old["remote_channel_id"] if old else None)
         query = urlencode({"client_id": client["client_id"], "redirect_uri": uri,
@@ -246,9 +252,9 @@ def finish(state, code):
             db.execute("BEGIN IMMEDIATE")
             if old:
                 changed = db.execute("""UPDATE youtube_links SET profile_json=?,encrypted_refresh=?,
-                    client_id=?,upload_authorized=?,analytics_authorized=?,updated_at=CURRENT_TIMESTAMP
-                    WHERE local_channel_id=? AND workspace_id=? AND remote_channel_id=? AND upload_authorized=? AND analytics_authorized=?""",
-                    (json.dumps(channel),encrypted,client["client_id"],int(record["upload"]),int(record["analytics"]),c,w,channel["id"],old["upload_authorized"],old["analytics_authorized"])).rowcount
+                    client_id=?,upload_authorized=?,analytics_authorized=?,manage_authorized=?,updated_at=CURRENT_TIMESTAMP
+                    WHERE local_channel_id=? AND workspace_id=? AND remote_channel_id=? AND upload_authorized=? AND analytics_authorized=? AND manage_authorized=?""",
+                    (json.dumps(channel),encrypted,client["client_id"],int(record["upload"]),int(record["analytics"]),int(record["manage"]),c,w,channel["id"],old["upload_authorized"],old["analytics_authorized"],old["manage_authorized"])).rowcount
                 if changed != 1:
                     raise ValueError("Local connection changed; restart authorization")
             else:
@@ -256,9 +262,9 @@ def finish(state, code):
                               (channel["id"], c)).fetchone():
                     raise ValueError("This YouTube channel is already linked to a local profile")
                 db.execute("""INSERT INTO youtube_links
-                    (local_channel_id,workspace_id,remote_channel_id,profile_json,encrypted_refresh,client_id,upload_authorized,analytics_authorized)
-                    VALUES(?,?,?,?,?,?,?,?)""", (c, w, channel["id"], json.dumps(channel), encrypted,
-                                               client["client_id"],int(record["upload"]),int(record["analytics"])))
+                    (local_channel_id,workspace_id,remote_channel_id,profile_json,encrypted_refresh,client_id,upload_authorized,analytics_authorized,manage_authorized)
+                    VALUES(?,?,?,?,?,?,?,?,?)""", (c, w, channel["id"], json.dumps(channel), encrypted,
+                                               client["client_id"],int(record["upload"]),int(record["analytics"]),int(record["manage"])))
             db.execute("INSERT INTO audit_log(workspace_id,channel_id,action) VALUES(?,?,'youtube_connected')", (w,c))
         return status(w, c)
 
