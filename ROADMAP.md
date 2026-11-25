@@ -55,3 +55,8 @@ Until V0.6, no real publishing occurs.
 - Keep master usable; test on isolated feature branches/worktrees with separate data.
 - Durable assembly queue, FFprobe validation, Windows launcher, database backup and actual FFmpeg CI are the first stabilization slice.
 - Next: real YouTube OAuth/read-only channel link, private upload with explicit approval, versioned migrations, render recovery and browser tests. Do not claim live integration without verification.
+
+## V0.6 account connection
+
+- Windows DPAPI-protected Google refresh token, PKCE and local callback; read-only channel information and statistics.
+- Next gate: real authorization on the user's machine, then private resumable uploads with separate upload permission.

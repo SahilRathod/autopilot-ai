@@ -37,7 +37,7 @@ try {
 } finally { Pop-Location }
 
 # Each process inherits the checkout, virtual environment, and configured API port.
-$backendCommand = "& '.\.venv\Scripts\python.exe' -m uvicorn apps.api.main:app --host 127.0.0.1 --port $ApiPort"
+$backendCommand = "& '.\.venv\Scripts\python.exe' -m uvicorn apps.api.main:app --host 127.0.0.1 --port $ApiPort --no-access-log"
 $workerCommand = "& '.\.venv\Scripts\python.exe' -m app.render_queue"
 $mode = if ($Dev) {"dev"} else {"start"}
 $webCommand = "npm.cmd run $mode -- --port $WebPort"

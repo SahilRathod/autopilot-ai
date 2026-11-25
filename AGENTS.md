@@ -59,3 +59,7 @@ Do not disable TLS verification to work around npm errors or add unapproved paid
 ## Working product rule
 
 Keep production master and real channel data separate from development. Do not merge unverified changes. Back up databases before upgrades, preserve source footage, and document remaining manual recovery steps. Prefer real working integrations over placeholders. Do not claim published content, successful OAuth, performance gains or end-to-end verification without evidence. No external publishing without explicit authorization.
+
+## YouTube connection rules
+
+Do not store raw OAuth refresh/access tokens or expose them to the browser. Use fixed Google endpoints, a one-time expiring PKCE state, and a loopback redirect. Never log OAuth callback URLs; launch Uvicorn with --no-access-log. A real account link requires creator consent. Read-only grants do not authorize upload or comment operations.

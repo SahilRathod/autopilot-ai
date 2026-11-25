@@ -93,3 +93,7 @@ npm run build
 ## Limitations
 The servers must remain on 127.0.0.1 because authentication and real tenant isolation are not implemented. Do not deploy this base publicly. The queued/completed statuses are LOCAL workflow labels, not YouTube uploads. The old gaming CLI has a separate database; V0.4.1 adds a manual platform job rendering bridge without migrating old records.
 Read BASE_ARCHITECTURE.md and ROADMAP.md for future plans.
+
+## YouTube account connection (V0.6 first slice)
+
+Windows-only, opt-in read-only Google desktop OAuth. See [YouTube setup](YOUTUBE_SETUP.md). Private uploads are not enabled in this slice.
