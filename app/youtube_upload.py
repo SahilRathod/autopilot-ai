@@ -31,7 +31,7 @@ def initialize():
             workspace_id INTEGER NOT NULL REFERENCES workspaces(id),
             channel_id INTEGER NOT NULL REFERENCES channels(id),
             remote_channel_id TEXT NOT NULL,
-            state TEXT NOT NULL CHECK(state IN ('pending','uploading','uploaded','failed','interrupted','review_required')),
+            state TEXT NOT NULL CHECK(state IN ('pending','uploading','uploaded','failed','interrupted','review_required','cancelled')),
             title TEXT NOT NULL, description TEXT NOT NULL, category_id TEXT NOT NULL,
             made_for_kids INTEGER NOT NULL,
             file_sha256 TEXT NOT NULL, file_bytes INTEGER NOT NULL,
@@ -126,6 +126,20 @@ def retry(w,c,job):
         if not link:
             raise ValueError("Reconnect the original YouTube channel before retrying")
         db.execute("UPDATE youtube_uploads SET state='pending',error=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=?",(job,))
+        return _public(db.execute("SELECT * FROM youtube_uploads WHERE job_id=?",(job,)).fetchone())
+
+
+def cancel(w,c,job):
+    initialize()
+    with core.connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        row=db.execute("SELECT * FROM youtube_uploads WHERE job_id=? AND workspace_id=? AND channel_id=?",(job,w,c)).fetchone()
+        if not row or row["state"]!="pending":
+            raise ValueError("Only pending upload tasks can be cancelled")
+        # A resumed pending task can already have bytes on Google; retain its session
+        # and tell the creator to check Studio rather than claiming remote deletion.
+        error="Local task cancelled. Check YouTube Studio if a previous transfer started." if row["encrypted_session"] else None
+        db.execute("UPDATE youtube_uploads SET state='cancelled',error=?,updated_at=CURRENT_TIMESTAMP WHERE job_id=?",(error,job))
         return _public(db.execute("SELECT * FROM youtube_uploads WHERE job_id=?",(job,)).fetchone())
 
 

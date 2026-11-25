@@ -48,10 +48,10 @@ export default function PrivateUploadPanel({workspaceId,channelId,remoteTitle,re
     }catch(e){setError(e instanceof Error?e.message:String(e));}
     finally{setBusy(false);}
   }
-  async function retry(id:number){
+  async function changeTask(id:number,action:'retry'|'cancel'){
     setBusy(true);setError('');
     try{
-      const row=await api<Task>(base+'/youtube/uploads/'+id+'/retry',{method:'POST',body:'{}'});
+      const row=await api<Task>(base+'/youtube/uploads/'+id+'/'+action,{method:'POST',body:'{}'});
       setTasks(old=>old.map(t=>t.job_id===id?row:t));
     }catch(e){setError(e instanceof Error?e.message:String(e));}
     finally{setBusy(false);}
@@ -89,7 +89,8 @@ export default function PrivateUploadPanel({workspaceId,channelId,remoteTitle,re
       {t.error&&<p className="media-muted">{t.error}</p>}
       {t.video_id&&<a href={'https://studio.youtube.com/video/'+t.video_id+'/edit'} target="_blank" rel="noreferrer">Review private video in YouTube Studio</a>}
       </div>
-      {(t.state==='failed'||t.state==='interrupted')&&<button type="button" className="button outline" disabled={busy} onClick={()=>retry(t.job_id)}>Retry existing task</button>}
+      {t.state==='pending'&&<button type="button" className="button outline" disabled={busy} onClick={()=>changeTask(t.job_id,'cancel')}>Cancel pending upload</button>}
+      {(t.state==='failed'||t.state==='interrupted')&&<button type="button" className="button outline" disabled={busy} onClick={()=>changeTask(t.job_id,'retry')}>Retry existing task</button>}
     </div>)}
   </div>;
 }

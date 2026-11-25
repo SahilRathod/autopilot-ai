@@ -149,3 +149,29 @@ class YouTubeUploadTests(unittest.TestCase):
             self.assertEqual(client.get(path).json()[0]["state"],"pending")
             other=f"/api/v1/workspaces/{self.other}/channels/{self.other_c}/youtube/uploads"
             self.assertEqual(client.get(other).json(),[])
+
+
+    def test_pending_upload_can_be_cancelled_before_network(self):
+        self.authorize(True)
+        self.enqueue()
+        self.assertEqual(upload.cancel(self.w,self.c,self.job)["state"],"cancelled")
+        with patch.object(upload,"initiate") as initiate:
+            self.assertIsNone(upload.run_once())
+            initiate.assert_not_called()
+
+    def test_google_protocol_uses_private_metadata_and_exact_content_range(self):
+        self.authorize(True)
+        self.enqueue()
+        with core.connect() as db:
+            row=db.execute("SELECT * FROM youtube_uploads WHERE job_id=?",(self.job,)).fetchone()
+        with patch.object(upload,"_http",return_value=httpx.Response(200,headers={"Location":self.session})) as send:
+            self.assertEqual(upload.initiate(row,"token"),self.session)
+        request=send.call_args.kwargs
+        self.assertEqual(request["json"]["status"]["privacyStatus"],"private")
+        self.assertFalse(request["json"]["status"]["selfDeclaredMadeForKids"])
+        self.assertEqual(request["params"]["notifySubscribers"],"false")
+        with patch.object(upload,"_http",return_value=httpx.Response(308)) as send:
+            upload.send_chunk(self.session,"token",b"abcd",4,10)
+            self.assertEqual(send.call_args.kwargs["headers"]["Content-Range"],"bytes 4-7/10")
+            upload.query_session(self.session,"token",10)
+            self.assertEqual(send.call_args.kwargs["headers"]["Content-Range"],"bytes */10")

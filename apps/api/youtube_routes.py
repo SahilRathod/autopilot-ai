@@ -104,3 +104,8 @@ def queue_upload(request: Request, w: int, c: int, body: PrivateUploadRequest):
 @router.post("/workspaces/{w}/channels/{c}/youtube/uploads/{job}/retry",status_code=202)
 def retry_upload(request: Request, w: int, c: int, job: int, body: ExplicitRequest):
     return checked(request, upload.retry,w,c,job)
+
+
+@router.post("/workspaces/{w}/channels/{c}/youtube/uploads/{job}/cancel")
+def cancel_upload(request: Request, w: int, c: int, job: int, body: ExplicitRequest):
+    return checked(request,upload.cancel,w,c,job)
