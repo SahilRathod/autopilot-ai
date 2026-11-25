@@ -1,5 +1,6 @@
 """Local operational utilities; no external services or secrets in output."""
 import argparse
+from contextlib import closing
 from datetime import datetime, timezone
 import os
 from pathlib import Path
@@ -23,14 +24,12 @@ def backup_database(source, destination):
     os.close(fd)
     staged = Path(name)
     try:
-        with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True) as original:
-            with sqlite3.connect(staged) as copy:
+        with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as original:
+            with closing(sqlite3.connect(staged)) as copy:
                 original.backup(copy)
                 if copy.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                     raise RuntimeError("Backup integrity check failed")
         # Close Windows file handles before publication.
-        original.close()
-        copy.close()
         # Hard link is an atomic no-overwrite publication on the same local filesystem.
         os.link(staged, destination)
     finally:

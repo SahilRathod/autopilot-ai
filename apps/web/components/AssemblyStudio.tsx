@@ -109,7 +109,7 @@ export default function AssemblyStudio({workspaceId, channelId, candidates, jobs
           })}
         </div>
         <p className="media-muted">{selection.length} clips · {clock(total)} total.
-          Shorts limit: 3 minutes. Long-form limit: 30 minutes.</p>
+          Shorts limit: 3 minutes. Up to eight 120-second clips per long-form export.</p>
         <h3>2. Choose an approved job</h3>
         <label>Production job
           <select aria-label="Approved assembly job" value={jobId ?? ''}

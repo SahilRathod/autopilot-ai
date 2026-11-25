@@ -1,5 +1,7 @@
 """Daily-use render queue: persistence, approval, isolation and recovery."""
 import tempfile
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -153,3 +155,33 @@ class RenderQueueTests(unittest.TestCase):
             self.assertEqual(db.execute("SELECT state FROM render_tasks").fetchone()[0], "pending")
         with self.assertRaises(FileExistsError):
             backup_database(core.DB, destination)
+
+
+    @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg unavailable")
+    def test_real_worker_renders_and_validates_actual_video(self):
+        source = editor.RAW / "synthetic.mp4"
+        subprocess.run(["ffmpeg", "-nostdin", "-y", "-hide_banner", "-loglevel", "error",
+                        "-f", "lavfi", "-i", "color=c=blue:s=160x90:r=15:d=3",
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", str(source)],
+                       check=True, timeout=30)
+        asset = media.import_media(self.w, self.c, source.name)
+        media.scan_media(self.w, self.c, asset["id"], clip_seconds=2, max_scan_seconds=3)
+        ids = [row["id"] for row in media.candidates(self.w, self.c, asset["id"])]
+        self.approve()
+        queue.enqueue(self.w, self.c, self.job, ids, caption_mode="soft", caption_lines=["Test caption"])
+        result = queue.run_once()
+        self.assertEqual(result["state"], "ready", result)
+        output = assembly.export_file(self.w, self.c, self.job)
+        self.assertTrue(output.is_file())
+        assembly.validate_output(output, "short", "fast", "soft", 2)
+
+    def test_recovery_marks_already_committed_export_ready(self):
+        self.approve()
+        self.enqueue()
+        with core.connect() as db:
+            db.execute("UPDATE render_tasks SET state='running' WHERE job_id=?", (self.job,))
+        with patch.object(assembly, "render_assembled_video", side_effect=self.fake_render), \
+             patch.object(assembly, "validate_output"):
+            assembly.export_job(self.w, self.c, self.job, self.ids, _queue_worker=True)
+        queue.recover()
+        self.assertEqual(queue.list_tasks(self.w, self.c)[0]["state"], "ready")

@@ -7,9 +7,8 @@ This is an incremental release, not a full YouTube automation platform. It prese
 Stop the old frontend and backend terminals before updating. Use the existing cloned repository root and the existing Python virtual environment.
 
     git status
-    .\.venv\Scripts\python.exe -m app.maintenance backup
 
-The backup command exists in V0.5.1. Before upgrading from an older version, stop all processes and copy data/platform.sqlite3 and data/agent.sqlite3 if present to a safe folder outside the repo. Keep original media and output files too; the SQLite backup does not contain them.
+Before upgrading from an older version, stop all processes and copy data/platform.sqlite3 and data/agent.sqlite3 if present to a safe folder outside the repo. Keep original media and output files too; the SQLite backup does not contain them.
 
 After the verified branch is merged, pull master and run:
 

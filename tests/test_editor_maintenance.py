@@ -71,7 +71,7 @@ class EditorMaintenanceTests(unittest.TestCase):
 class APIMetadataTests(unittest.TestCase):
     def test_health_version_matches_release(self):
         from apps.api.main import health
-        self.assertEqual(health()["version"], "0.5.0")
+        self.assertEqual(health()["version"], "0.5.1")
 
 
 if __name__ == "__main__":

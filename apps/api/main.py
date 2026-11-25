@@ -29,7 +29,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Autopilot AI Local API", version="0.5.0", lifespan=lifespan,
+    title="Autopilot AI Local API", version="0.5.1", lifespan=lifespan,
     description="Local-only management API. No authentication or YouTube publishing yet.",
 )
 app.add_middleware(
@@ -89,7 +89,7 @@ def channel_or_404(workspace_id: int, channel_id: int):
 
 @app.get("/api/v1/health")
 def health():
-    return {"status": "ok", "version": "0.5.0", "mode": "local", "publishing": False}
+    return {"status": "ok", "version": "0.5.1", "mode": "local", "publishing": False}
 
 
 @app.get("/api/v1/workspaces")

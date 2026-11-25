@@ -74,7 +74,12 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. API docs: http://127.0.0.1:8000/docs.
+**Terminal 3 (repository root)**
+```powershell
+.\.venv\Scripts\python.exe -m app.render_queue
+```
+
+Or use `./start.ps1` for all three services after setup. Open http://127.0.0.1:3000. API docs: http://127.0.0.1:8000/docs.
 
 ## Test
 ```powershell
