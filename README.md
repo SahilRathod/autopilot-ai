@@ -1,6 +1,6 @@
 # Autopilot AI — V0.5.1 Working Creator Studio
 
-**Current release: V1.0 RC1 (local Windows creator studio).** See [release acceptance](RELEASE_ACCEPTANCE.md) before using real YouTube content. This candidate has implementation and automated checks, not completed live Google/account acceptance.
+**Current release: V1.0 RC2 (local Windows creator studio).** See [release acceptance](RELEASE_ACCEPTANCE.md) before using real YouTube content. This candidate has implementation and automated checks, not completed live Google/account acceptance.
 
 Local-first multi-channel AI drafting, media analysis, and **approved local MP4 draft assembly**. Still not an automatic speech transcription service or YouTube uploader.
 
@@ -117,8 +117,10 @@ Media Studio supports accurate SRT timing, lossless video-stream subtitle muxing
 
 Schedule offline content drafts and optional existing-footage analysis. The shared local worker prepares review jobs and suggests non-overlapping clips. Edit scripts before approval. See [Operator guide](OPERATOR.md).
 
-## V0.8, V0.9 and V1.0 RC1
+## V0.8, V0.9 and V1.0 RC2
 
 - Actual on-demand video and channel statistics, optional read-only Analytics API reports, and comment review.
 - Explicit future public scheduling and individual replies with separate management consent. No automatic publication or bulk comments.
-- Release gates: real browser smoke test, Windows media regression suite and upgrade compatibility. See [YouTube setup](YOUTUBE_SETUP.md) and [release acceptance](RELEASE_ACCEPTANCE.md).
+- Release gates: real browser smoke test, Windows media regression suite, upgrade compatibility, and an isolated local acceptance runner. See [YouTube setup](YOUTUBE_SETUP.md) and [release acceptance](RELEASE_ACCEPTANCE.md).
+
+For an offline local production self-test: `python -m app.acceptance` (optional `--footage` local sample). See [release acceptance](RELEASE_ACCEPTANCE.md) for PowerShell commands and report boundaries.
