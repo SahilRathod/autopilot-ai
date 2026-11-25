@@ -63,3 +63,5 @@ Keep production master and real channel data separate from development. Do not m
 ## YouTube connection rules
 
 Do not store raw OAuth refresh/access tokens or expose them to the browser. Use fixed Google endpoints, a one-time expiring PKCE state, and a loopback redirect. Never log OAuth callback URLs; launch Uvicorn with --no-access-log. A real account link requires creator consent. Read-only grants do not authorize upload or comment operations.
+
+- Private uploads require separate user-granted upload scope, an approved finished export, explicit per-video confirmation and exact intended channel identity. Never silently retry an expired/ambiguous resumable session as a new upload. Public publishing stays disabled. Do not log credentials or resumable session URLs.

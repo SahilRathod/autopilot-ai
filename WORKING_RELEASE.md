@@ -16,14 +16,15 @@ After the verified branch is merged, pull master and run:
     .\.venv\Scripts\python.exe -m app.maintenance doctor
     .\start.ps1
 
-The launcher checks PATH and dependencies, backs up existing databases, builds the production dashboard, and opens three PowerShell windows: FastAPI (8000), worker, Next.js (3000). If script execution is restricted, run PowerShell with -ExecutionPolicy RemoteSigned -File .\start.ps1, only after reviewing the local script.
+The launcher checks PATH and dependencies, backs up existing databases, builds the production dashboard, and opens four PowerShell windows: FastAPI (8000), render worker, YouTube upload worker, Next.js (3000). If script execution is restricted, run PowerShell with -ExecutionPolicy RemoteSigned -File .\start.ps1, only after reviewing the local script.
 
-Alternatively run these commands in three terminals:
+Alternatively run these commands in four terminals:
 
     .\.venv\Scripts\python.exe -m uvicorn apps.api.main:app --host 127.0.0.1 --port 8000 --no-access-log
     .\.venv\Scripts\python.exe -m app.render_queue
+    .\.venv\Scripts\python.exe -m app.youtube_upload
     cd apps\web
-    npm.cmd run dev
+    npm.cmd run dev -- --hostname 127.0.0.1
 
 Open http://127.0.0.1:3000. In Media Studio, select candidates, create/approve a job, choose export options, then Queue local MP4. Render tasks & exports displays pending, running, ready, failed or interrupted. The queue survives closing the dashboard. If no worker is running, tasks remain pending; start the worker to process them.
 

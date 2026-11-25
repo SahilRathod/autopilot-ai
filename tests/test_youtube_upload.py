@@ -130,3 +130,22 @@ class YouTubeUploadTests(unittest.TestCase):
         self.assertEqual(upload.next_offset(httpx.Response(308,headers={"Range":"bytes=0-49"}),100),50)
         with self.assertRaises(ValueError):
             upload.next_offset(httpx.Response(308,headers={"Range":"bytes=0-999"}),100)
+
+
+    def test_http_private_upload_requires_consent_and_reports_scope(self):
+        from fastapi.testclient import TestClient
+        from apps.api.main import app
+        self.authorize(True)
+        with TestClient(app,base_url="http://127.0.0.1:8000") as client, \
+             patch.object(assembly,"validate_output"):
+            path=f"/api/v1/workspaces/{self.w}/channels/{self.c}/youtube/uploads"
+            data={"job_id":self.job,"title":"Private test","category_id":"20",
+                  "made_for_kids":False,"private_upload_approved":False}
+            self.assertEqual(client.post(path,json=data).status_code,409)
+            data["private_upload_approved"]=True
+            self.assertEqual(client.post(path,json=data,headers={"Origin":"https://example.com"}).status_code,403)
+            response=client.post(path,json=data)
+            self.assertEqual(response.status_code,202,response.text)
+            self.assertEqual(client.get(path).json()[0]["state"],"pending")
+            other=f"/api/v1/workspaces/{self.other}/channels/{self.other_c}/youtube/uploads"
+            self.assertEqual(client.get(other).json(),[])

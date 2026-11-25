@@ -60,3 +60,5 @@ Until V0.6, no real publishing occurs.
 
 - Windows DPAPI-protected Google refresh token, PKCE and local callback; read-only channel information and statistics.
 - Next gate: real authorization on the user's machine, then private resumable uploads with separate upload permission.
+
+- V0.6 private upload implementation: reviewed assembly export, scope upgrade, explicit per-video consent, private-only resumable upload queue and provider identity checks. Live upload and Google consent remain release verification gates.

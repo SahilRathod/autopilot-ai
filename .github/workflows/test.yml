@@ -34,5 +34,5 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install -r apps/api/requirements.txt
-      - run: python -m unittest discover -s tests -p test_youtube_connection.py -v
+      - run: python -m unittest discover -s tests -p "test_youtube*.py" -v
       - run: python -c "from app.youtube_connection import protect, unprotect; data=protect('test-credential'); assert b'test-credential' not in data; assert unprotect(data)=='test-credential'"
