@@ -175,9 +175,17 @@ def run(footage=None):
 def main():
     parser = argparse.ArgumentParser(description="Run an isolated, offline local production acceptance test")
     parser.add_argument("--footage", type=Path, help="Optional existing video sample up to 250 MiB; copied temporarily")
+    parser.add_argument("--report", type=Path, help="Write a new UTF-8 JSON report; existing files are never overwritten")
     args = parser.parse_args()
     report = run(args.footage)
-    print(json.dumps(report, indent=2))
+    payload = json.dumps(report, indent=2) + "\n"
+    if args.report is not None:
+        try:
+            with args.report.open("x", encoding="utf-8") as output:
+                output.write(payload)
+        except OSError:
+            parser.exit(2, "Could not create report file; choose a new writable filename.\n")
+    print(payload, end="")
     return 0 if report["status"] == "passed" else 1
 
 

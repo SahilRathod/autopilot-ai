@@ -43,13 +43,13 @@ This is a **release candidate**, not a production-certified V1.0. Automated CI u
 Run from the repository root in PowerShell after installing requirements and FFmpeg:
 
 ```powershell
-.\.venv\Scripts\python.exe -m app.acceptance | Tee-Object -FilePath acceptance-report.json
+.\.venv\Scripts\python.exe -m app.acceptance --report acceptance-report.json
 ```
 
 For an actual footage sample you own, use the optional argument (example filename; substitute your own):
 
 ```powershell
-.\.venv\Scripts\python.exe -m app.acceptance --footage "media/raw/your-clip.mp4" | Tee-Object -FilePath acceptance-report.json
+.\.venv\Scripts\python.exe -m app.acceptance --footage "media/raw/your-clip.mp4" --report acceptance-report.json
 ```
 
-The runner copies at most 250 MiB of existing video into a temporary sandbox (minimum two seconds), or generates a synthetic sample locally. It exercises the real planner/ranking/approval/render pipeline, a simulated interrupted queue claim, caption mux, narration tone mixing, thumbnail extraction, revision preservation and database backup. It restores application paths and deletes temporary data; it never uploads, calls Google/Gemini, or uses your production database. The JSON records OS, CPU count, free temporary disk, FFmpeg version and measured output resolution/render seconds. A failed stage returns a nonzero exit code. Share the report if you want help diagnosing a failure. No user video contents, credentials or source paths are included. The report is evidence for local execution only: inspect actual video quality separately, and test OAuth and real YouTube operations separately. Optional AI verification is not included.
+The runner copies at most 250 MiB of existing video into a temporary sandbox (minimum two seconds), or generates a synthetic sample locally. It exercises the real planner/ranking/approval/render pipeline, a simulated interrupted queue claim, caption mux, narration tone mixing, thumbnail extraction, revision preservation and database backup. It restores application paths and deletes temporary data; it never uploads, calls Google/Gemini, or uses your production database. The JSON records OS, CPU count, free temporary disk, FFmpeg version and measured output resolution/render seconds. A failed stage returns a nonzero exit code. The report is saved directly as UTF-8 JSON; choose a different filename for each run because existing reports are never overwritten. In PowerShell, check `$LASTEXITCODE` immediately after the command (0 = passed, 1 = acceptance failed, 2 = command/report error). Share the report if you want help diagnosing a failure. No user video contents, credentials or source paths are included. The report is evidence for local execution only: inspect actual video quality separately, and test OAuth and real YouTube operations separately. Optional AI verification is not included.

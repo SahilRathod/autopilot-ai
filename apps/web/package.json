@@ -20,6 +20,6 @@
     "@types/react-dom": "^19.0.0"
   },
   "engines": {
-    "node": ">=21.0.0-rc.2"
+    "node": ">=22.0.0"
   }
 }

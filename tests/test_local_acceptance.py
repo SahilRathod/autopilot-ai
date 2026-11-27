@@ -1,5 +1,8 @@
 """Acceptance runner must leave the user's working database and media untouched."""
 import shutil
+import io
+import json
+from contextlib import redirect_stdout, redirect_stderr
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +12,20 @@ from app import acceptance, editor, platform_core as core
 
 
 class AcceptanceTests(unittest.TestCase):
+    def test_cli_writes_utf8_report_without_overwriting(self):
+        report = {"status": "failed", "reason": "sample"}
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "acceptance.json"
+            with patch("sys.argv", ["acceptance", "--report", str(target)]), \
+                 patch.object(acceptance, "run", return_value=report), redirect_stdout(io.StringIO()):
+                self.assertEqual(acceptance.main(), 1)
+                self.assertEqual(json.loads(target.read_text(encoding="utf-8")), report)
+                original = target.read_bytes()
+                with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                    acceptance.main()
+                self.assertEqual(error.exception.code, 2)
+                self.assertEqual(target.read_bytes(), original)
+
     def test_missing_dependency_is_reported_without_creating_data(self):
         before = (core.DB, editor.RAW, editor.OUT)
         with patch.object(acceptance.shutil, "which", return_value=None):
